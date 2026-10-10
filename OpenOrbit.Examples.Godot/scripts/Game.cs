@@ -126,7 +126,7 @@ public partial class Game : Node2D, IInputEventBus
     {
         _engine?.Reset();
 
-        _engine = new GameEngine(new GameSession(_loaded.Chart, JudgmentWindows.Normal), new SongClock(_music), this);
+        _engine = new GameEngine(new GameSession(_loaded.Chart, JudgmentWindows.Normal), _clock, this);
         _engine.Hit += Hit;
         
         _counts.Clear();

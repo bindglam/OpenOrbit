@@ -29,7 +29,12 @@ public static class ChartCompiler
             if (floor > 0)
             {
                 if (isMidspin)
-                    incomingAngle += 180; // 이동 없이 중심 행성만 바뀜 → 진입 방향 반전
+                {
+                    // 직전 타일은 찍기만 하고 중심 행성은 그 앞 타일에 그대로 남는다 → 한 칸 뒤로, 진입 방향 반전.
+                    // 회전하던 행성은 직전 타일 자리(뒤 칸에서 원래 진행 방향)에서 이어서 돈다.
+                    position -= Vec2.FromAngle(incomingAngle);
+                    incomingAngle += 180;
+                }
                 else
                 {
                     incomingAngle = angle;

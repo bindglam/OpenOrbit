@@ -4,7 +4,7 @@ using Godot;
 namespace OpenOrbit.Examples.Godot;
 
 /// <summary>
-/// 타일 이미지(arm, joint)와 그 "채움" 버전을 텍스처 한 장에 모은 아틀라스.
+/// 타일 이미지(arm, joint, midspin)와 arm, joint 의 "채움" 버전을 텍스처 한 장에 모은 아틀라스.
 /// 한 텍스처만 쓰면 Godot 가 타일 여러 개를 한 번의 드로우 콜로 묶어 그릴 수 있다.
 /// <para>
 /// 채움 버전은 원본에서 어두운 테두리 픽셀을 투명하게 만든 것이다. 타일을 "원본 → 채움" 순서로 두 번 그리면
@@ -20,21 +20,20 @@ public sealed class TileAtlas
     public Rect2 ArmFill { get; }
     public Rect2 Joint { get; }
     public Rect2 JointFill { get; }
+    public Rect2 Midspin { get; }
 
-    private TileAtlas(Texture2D texture, Rect2 arm, Rect2 armFill, Rect2 joint, Rect2 jointFill)
+    private TileAtlas(Texture2D texture, Rect2[] regions)
     {
         Texture = texture;
-        Arm = arm;
-        ArmFill = armFill;
-        Joint = joint;
-        JointFill = jointFill;
+        (Arm, ArmFill, Joint, JointFill, Midspin) = (regions[0], regions[1], regions[2], regions[3], regions[4]);
     }
 
-    public static TileAtlas Load(string armPath, string jointPath)
+    public static TileAtlas Load(string armPath, string jointPath, string midspinPath)
     {
         var arm = LoadImage(armPath);
         var joint = LoadImage(jointPath);
-        Image[] parts = [arm, ExtractFill(arm), joint, ExtractFill(joint)];
+        var midspin = LoadImage(midspinPath);
+        Image[] parts = [arm, ExtractFill(arm), joint, ExtractFill(joint), midspin];
 
         var width = Padding;
         var height = 0;
@@ -57,7 +56,7 @@ public sealed class TileAtlas
 
         // 화면에서는 원본보다 훨씬 작게 그려지므로 밉맵이 없으면 테두리가 깨진다
         atlas.GenerateMipmaps();
-        return new TileAtlas(ImageTexture.CreateFromImage(atlas), regions[0], regions[1], regions[2], regions[3]);
+        return new TileAtlas(ImageTexture.CreateFromImage(atlas), regions);
     }
 
     private static Image LoadImage(string path)

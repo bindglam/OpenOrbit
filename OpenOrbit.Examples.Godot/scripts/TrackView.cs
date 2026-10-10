@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Godot;
 using OpenOrbit.Core.Charts;
+using OpenOrbit.Core.Geometry;
 
 namespace OpenOrbit.Examples.Godot;
 
@@ -16,22 +18,32 @@ namespace OpenOrbit.Examples.Godot;
 /// <para>
 /// 겹쳐 있는 타일은 순서가 앞선 타일이 위에 보이도록 draw index 를 역순으로 준다.
 /// </para>
+/// <para>
+/// 미드스핀 직전 타일은 행성이 찍기만 하고 돌아 나오는 막다른 타일이라 뾰족한 조각(midspin.png)으로 그린다.
+/// 미드스핀 자체는 한 칸 뒤 타일과 같은 자리에 있으므로 그 타일과 한 덩어리로 묶어 함께 그린다
+/// (따로 그리면 위에 있는 타일의 테두리가 아래 타일의 팔을 가로지른다).
+/// </para>
 /// </summary>
 public partial class TrackView : Node2D
 {
     private const string ArmTexturePath = "res://assets/sprite/tile/arm.png";
     private const string JointTexturePath = "res://assets/sprite/tile/joint.png";
+    private const string MidspinTexturePath = "res://assets/sprite/tile/midspin.png";
 
-    private const float Width = 0.34f * Coords.UnitPx;
+    private const float Width = 0.5f * Coords.UnitPx; // 행성(지름 약 0.4)이 꽉 들어찰 만큼
     private const float ArmLength = 0.46f * Coords.UnitPx; // 0.5 보다 짧게 그려 타일 사이에 틈을 둔다
     private const float IconDim = 0.3f;
 
     private static readonly Rect2 ArmRect = new(0, -Width / 2, ArmLength, Width);
     private static readonly Rect2 JointRect = new(-Width / 2, -Width / 2, Width, Width);
+    // 미드스핀 조각 (1:1 이미지, 진행 방향 기준): 평평한 쪽이 앞 타일 쪽 팔 자리에서 시작한다
+    private static readonly Rect2 MidspinRect = new(-ArmLength, -Width / 2, Width, Width);
 
     private TileAtlas? _atlas;
     private Chart? _chart;
     private readonly List<Rid> _tileItems = [];
+    private int[] _owners = []; // 타일 → 그 타일을 그리는 타일 (미드스핀이면 같은 자리의 타일, 아니면 자기 자신)
+    private readonly Dictionary<int, List<int>> _members = []; // 미드스핀을 함께 그리는 타일 → 미드스핀들
     private Rid _nextMarker;
 
     private readonly HashSet<int> _twirls = [];
@@ -49,7 +61,7 @@ public partial class TrackView : Node2D
 
     public void Setup(Chart chart)
     {
-        _atlas ??= TileAtlas.Load(ArmTexturePath, JointTexturePath);
+        _atlas ??= TileAtlas.Load(ArmTexturePath, JointTexturePath, MidspinTexturePath);
         FreeItems();
         _chart = chart;
         _twirls.Clear();
@@ -66,6 +78,20 @@ public partial class TrackView : Node2D
             prevBpm = tiles[i].Bpm;
         }
 
+        _owners = new int[tiles.Count];
+        _members.Clear();
+        for (var i = 0; i < tiles.Count; i++)
+        {
+            // 미드스핀은 두 칸 앞(한 칸 뒤로 돌아온 자리) 타일과 같은 자리
+            _owners[i] = i >= 2 && tiles[i].IsMidspin ? _owners[i - 2] : i;
+            if (_owners[i] != i)
+            {
+                if (!_members.TryGetValue(_owners[i], out var members))
+                    _members[_owners[i]] = members = [];
+                members.Add(i);
+            }
+        }
+
         CurrentFloor = 0;
         _appliedFloor = 0;
 
@@ -76,7 +102,11 @@ public partial class TrackView : Node2D
             // draw index 가 클수록 나중에(위에) 그려진다 → 앞 순서 타일이 위로
             RenderingServer.CanvasItemSetDrawIndex(item, tiles.Count - i);
             _tileItems.Add(item);
-            RecordTile(i);
+        }
+        for (var i = 0; i < tiles.Count; i++)
+        {
+            if (_owners[i] == i)
+                RecordTile(i);
         }
 
         _nextMarker = CreateItem(parent, Vector2.Zero);
@@ -94,55 +124,87 @@ public partial class TrackView : Node2D
         // 지나감 ↔ 안 지나감 상태가 바뀐 타일만 다시 기록 (보통 1개, 재시작 시에는 지나갔던 타일 전부)
         var (from, to) = floor > _appliedFloor ? (_appliedFloor, floor) : (floor, _appliedFloor);
         _appliedFloor = floor;
+        var owners = new HashSet<int>();
         for (var i = from; i < to && i < _tileItems.Count; i++)
-            RecordTile(i);
+            owners.Add(_owners[i]);
+        foreach (var owner in owners)
+            RecordTile(owner);
         MoveNextMarker();
     }
 
     public override void _ExitTree() => FreeItems();
 
-    /// <summary>타일 하나의 그리기 명령을 (다시) 기록한다. 좌표는 타일 중심 기준.</summary>
-    private void RecordTile(int index)
+    /// <summary>
+    /// 타일 하나(와 같은 자리의 미드스핀들)의 그리기 명령을 (다시) 기록한다. 좌표는 타일 중심 기준.
+    /// owner 는 미드스핀이 아닌 타일이어야 한다.
+    /// </summary>
+    private void RecordTile(int owner)
     {
-        var item = _tileItems[index];
+        var item = _tileItems[owner];
         var tiles = _chart!.Tiles;
-        var passed = index < _appliedFloor;
-        var color = passed ? Palette.TrackPassed : Palette.Track;
-        var center = Coords.ToScreen(tiles[index].Position);
+        var members = _members.GetValueOrDefault(owner);
+        var last = members?[^1] ?? owner;
 
-        // 이웃 타일 방향으로 팔을 뻗는다 (미드스핀처럼 같은 자리면 생략)
-        Span<float> armAngles = stackalloc float[2];
-        var armCount = 0;
-        if (index > 0 && TryDirection(center, Coords.ToScreen(tiles[index - 1].Position), out var toPrev))
-            armAngles[armCount++] = toPrev;
-        if (index + 1 < tiles.Count && TryDirection(center, Coords.ToScreen(tiles[index + 1].Position), out var toNext))
-            armAngles[armCount++] = toNext;
+        // 묶음의 마지막 타일을 지나야 지나간 것 (미드스핀 뒤에 다시 이 자리를 중심으로 도는 동안은 밟고 있는 타일)
+        var passed = last < _appliedFloor;
+        var color = passed ? Palette.TrackPassed : Palette.Track;
+        var center = Coords.ToScreen(tiles[owner].Position);
 
         RenderingServer.CanvasItemClear(item);
         var atlas = _atlas!;
         var texture = atlas.Texture.GetRid();
 
-        // 1차: 테두리 포함 원본, 2차: 채움만 → 팔과 원 사이의 안쪽 테두리가 지워진다
-        for (var pass = 0; pass < 2; pass++)
+        if (owner + 1 < tiles.Count && tiles[owner + 1].IsMidspin)
         {
-            var (armRegion, jointRegion) = pass == 0 ? (atlas.Arm, atlas.Joint) : (atlas.ArmFill, atlas.JointFill);
-            for (var a = 0; a < armCount; a++)
-            {
-                RenderingServer.CanvasItemAddSetTransform(item, new Transform2D(armAngles[a], Vector2.Zero));
-                RenderingServer.CanvasItemAddTextureRectRegion(item, ArmRect, texture, armRegion, color);
-            }
+            // 미드스핀 직전 타일: 들어온 방향으로 뾰족하게 끝나는 조각 하나 (한 칸 뒤 = 미드스핀 자리에서 들어온다)
+            var forward = (center - Coords.ToScreen(tiles[owner + 1].Position)).Angle();
+            RenderingServer.CanvasItemAddSetTransform(item, new Transform2D(forward, Vector2.Zero));
+            RenderingServer.CanvasItemAddTextureRectRegion(item, MidspinRect, texture, atlas.Midspin, color);
             RenderingServer.CanvasItemAddSetTransform(item, Transform2D.Identity);
-            RenderingServer.CanvasItemAddTextureRectRegion(item, JointRect, texture, jointRegion, color);
+        }
+        else
+        {
+            // 묶음 안 타일들의 앞뒤 타일 방향으로 팔을 뻗는다 (같은 자리거나 같은 방향이면 생략)
+            var armAngles = new List<float>(4);
+            void AddArm(int neighbor)
+            {
+                if (neighbor < 0 || neighbor >= tiles.Count || _owners[neighbor] == owner)
+                    return;
+                if (TryDirection(center, Coords.ToScreen(tiles[neighbor].Position), out var angle)
+                    && !armAngles.Exists(a => Mathf.IsEqualApprox(Mathf.AngleDifference(a, angle), 0, 1e-3f)))
+                    armAngles.Add(angle);
+            }
+            AddArm(owner - 1);
+            AddArm(owner + 1);
+            foreach (var m in members ?? [])
+            {
+                AddArm(m - 1);
+                AddArm(m + 1);
+            }
+
+            // 1차: 테두리 포함 원본, 2차: 채움만 → 팔과 원 사이의 안쪽 테두리가 지워진다
+            for (var pass = 0; pass < 2; pass++)
+            {
+                var (armRegion, jointRegion) = pass == 0 ? (atlas.Arm, atlas.Joint) : (atlas.ArmFill, atlas.JointFill);
+                foreach (var angle in armAngles)
+                {
+                    RenderingServer.CanvasItemAddSetTransform(item, new Transform2D(angle, Vector2.Zero));
+                    RenderingServer.CanvasItemAddTextureRectRegion(item, ArmRect, texture, armRegion, color);
+                }
+                RenderingServer.CanvasItemAddSetTransform(item, Transform2D.Identity);
+                RenderingServer.CanvasItemAddTextureRectRegion(item, JointRect, texture, jointRegion, color);
+            }
         }
 
-        // 아이콘
+        // 아이콘 (묶음 안 어느 타일에 있든 가운데에)
         var dim = new Color(1, 1, 1, passed ? IconDim : 1);
-        if (tiles[index].IsMidspin)
-            RenderingServer.CanvasItemAddCircle(item, Vector2.Zero, Width * 0.3f, Palette.Midspin);
-        if (_twirls.Contains(index))
-            RenderingServer.CanvasItemAddPolyline(item, ArcPoints(Width * 0.3f, 0.3f, Mathf.Tau - 0.3f, 24), new[] { Palette.Twirl * dim }, 4, true);
-        if (_speedChanges.TryGetValue(index, out var faster))
-            RenderingServer.CanvasItemAddCircle(item, Vector2.Zero, Width * 0.18f, (faster ? Palette.SpeedUp : Palette.SpeedDown) * dim);
+        foreach (var i in members is null ? [owner] : members.Prepend(owner))
+        {
+            if (_twirls.Contains(i))
+                RenderingServer.CanvasItemAddPolyline(item, ArcPoints(Width * 0.3f, 0.3f, Mathf.Tau - 0.3f, 24), new[] { Palette.Twirl * dim }, 4, true);
+            if (_speedChanges.TryGetValue(i, out var faster))
+                RenderingServer.CanvasItemAddCircle(item, Vector2.Zero, Width * 0.18f, (faster ? Palette.SpeedUp : Palette.SpeedDown) * dim);
+        }
     }
 
     private void MoveNextMarker()

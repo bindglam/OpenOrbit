@@ -10,6 +10,7 @@ script = ExtResource("1_qc7j1")
 [node name="Fire" type="Sprite2D" parent="." unique_id=450037554]
 scale = Vector2(0.07, 0.07)
 texture = ExtResource("1_4w4pe")
+offset = Vector2(1, 0)
 
 [node name="Ice" type="Sprite2D" parent="." unique_id=2025096407]
 scale = Vector2(0.07, 0.07)

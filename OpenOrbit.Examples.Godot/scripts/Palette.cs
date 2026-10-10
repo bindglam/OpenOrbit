@@ -9,7 +9,6 @@ public static class Palette
     public static readonly Color Track = new("debb7b");
     public static readonly Color TrackPassed = Track.Lerp(Background, 0.78f); // 반투명이면 겹치는 부분이 진해지므로 불투명하게
     public static readonly Color NextTile = new("ffffff");
-    public static readonly Color Midspin = new("0d1017");
     public static readonly Color Orbit = new(1, 1, 1, 0.1f);
 
     public static readonly Color Fire = new("ff5a36");

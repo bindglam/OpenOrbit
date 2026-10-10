@@ -44,6 +44,6 @@ public partial class PlanetView : Node2D
 
     public override void _Draw()
     {
-        DrawArc(_pivot, Coords.UnitPx, 0, Mathf.Tau, 64, Palette.Orbit, 2, true);
+        DrawArc(Vector2.Zero, Coords.UnitPx, 0, Mathf.Tau, 64, Palette.Orbit, 2, true);
     }
 }

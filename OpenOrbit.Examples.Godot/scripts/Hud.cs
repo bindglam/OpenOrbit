@@ -10,6 +10,8 @@ public partial class Hud : CanvasLayer
     private Label _center = null!;
     private Label _hint = null!;
 
+    public HitErrorMeter Meter { get; private set; } = null!;
+
     public string Info { set => _info.Text = value; }
     public string Stats { set => _stats.Text = value; }
     public string Center { set => _center.Text = value; }
@@ -22,6 +24,7 @@ public partial class Hud : CanvasLayer
         _center = MakeLabel(HorizontalAlignment.Center, VerticalAlignment.Center, 40);
         _hint = MakeLabel(HorizontalAlignment.Center, VerticalAlignment.Bottom, 16);
         _hint.Modulate = new Color(1, 1, 1, 0.6f);
+        AddChild(Meter = new HitErrorMeter());
     }
 
     private Label MakeLabel(HorizontalAlignment horizontal, VerticalAlignment vertical, int fontSize)

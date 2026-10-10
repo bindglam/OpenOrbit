@@ -29,7 +29,7 @@ public partial class Game : Node2D, IInputEventBus
     private SongClock _clock = null!;
     
     private AudioStreamPlayer _music = null!;
-    private AudioStreamPlayer _hitsound = null!;
+    private HitsoundMixer _hitsounds = null!;
     private TrackView _track = null!;
     private PlanetView _planets = null!;
     private Node2D _popups = null!;
@@ -46,7 +46,7 @@ public partial class Game : Node2D, IInputEventBus
 
         _music = GetNode<AudioStreamPlayer>("MusicPlayer");
         
-        _hitsound = GetNode<AudioStreamPlayer>("HitsoundPlayer");
+        _hitsounds = new HitsoundMixer(GetNode<AudioStreamPlayer>("HitsoundPlayer"), _music);
         
         AddChild(_track = new TrackView());
         _planets = GetNode<PlanetView>("PlanetView");
@@ -125,6 +125,7 @@ public partial class Game : Node2D, IInputEventBus
     private void Reset()
     {
         _engine?.Reset();
+        _hitsounds.Stop();
 
         _engine = new GameEngine(new GameSession(_loaded.Chart, JudgmentWindows.Normal), _clock, this);
         _engine.Hit += Hit;
@@ -146,11 +147,16 @@ public partial class Game : Node2D, IInputEventBus
         _engine!.Autoplay = Autoplay;
         _engine!.NoFail = NoFail;
         _engine!.Start();
+        _hitsounds.Start(_loaded.Chart); // 곡 재생과 같은 프레임에 시작해야 박자가 맞는다
     }
 
     // ---- 매 프레임 ----
     public override void _Process(double delta)
     {
+        if (_engine?.CurrentState is GameEngine.State.Failed)
+            _hitsounds.Stop();
+        _hitsounds.Fill();
+
         if (_engine == null || !_hasChart)
         {
             _hud.Center = _message ?? "";
@@ -175,12 +181,6 @@ public partial class Game : Node2D, IInputEventBus
     {
         _counts[result.Margin] = _counts.GetValueOrDefault(result.Margin) + 1;
         _track.CurrentFloor = _engine!.Session.CurrentFloor;
-
-        if (result.Margin is not (HitMargin.TooEarly or HitMargin.TooLate))
-        {
-            _hitsound.CallDeferred("stop");
-            _hitsound.CallDeferred("play");
-        }
 
         if (result.Margin != HitMargin.Auto)
         {

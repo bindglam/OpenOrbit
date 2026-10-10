@@ -28,7 +28,7 @@ public sealed class GameEngine
     private double _frozenMs;
     public double CurrentTimeMs => CurrentState is State.Playing or State.Cleared ? SongTimeMs : _frozenMs;
 
-    private Thread _updateThread;
+    private Thread? _updateThread;
 
     public GameEngine(GameSession session, IGameClock clock, IInputEventBus inputEventBus)
     {
@@ -45,6 +45,8 @@ public sealed class GameEngine
 
     private void InitUpdateThread()
     {
+        if(_updateThread?.ThreadState == ThreadState.Running)
+            _updateThread?.Join();
         _updateThread = new Thread(() =>
         {
             while (CurrentState is State.Playing or State.Cleared)
@@ -66,14 +68,18 @@ public sealed class GameEngine
         
         Clock.Start();
         
-        _updateThread.Start();
+        if(_updateThread == null)
+            InitUpdateThread();
+        _updateThread!.Start();
     }
 
     public void Reset()
     {
         CurrentState = State.Ready;
         
-        InitUpdateThread();
+        if(_updateThread?.ThreadState == ThreadState.Running)
+            _updateThread?.Join();
+        _updateThread = null;
         
         Clock.Stop();
         Session.Reset();
@@ -84,6 +90,10 @@ public sealed class GameEngine
     public void Fail()
     {
         CurrentState = State.Failed;
+        
+        if(_updateThread?.ThreadState == ThreadState.Running)
+            _updateThread?.Join();
+        _updateThread = null;
         
         _frozenMs = SongTimeMs;
         

@@ -144,7 +144,7 @@ public partial class Game : Node2D, IInputEventBus
             return;
         _message = null;
 
-        _engine!.Autoplay = Autoplay;
+        _engine!.Autoplay = GameEngine.AutoPlay.Strict;
         _engine!.NoFail = NoFail;
         _engine!.Start();
         _hitsounds.Start(_loaded.Chart); // 곡 재생과 같은 프레임에 시작해야 박자가 맞는다

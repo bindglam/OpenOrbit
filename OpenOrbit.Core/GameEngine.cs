@@ -16,7 +16,8 @@ public sealed class GameEngine
     public IInputEventBus InputEventBus { get; }
     
     public double CalibrationMs { get; set; }
-    public bool Autoplay { get; set; } = false;
+    public enum AutoPlay { None, Strict, Perfect }
+    public AutoPlay Autoplay { get; set; } = AutoPlay.Perfect;
     public bool NoFail { get; set; } = false;
     
     public enum State { Ready, Playing, Failed, Cleared }
@@ -122,13 +123,20 @@ public sealed class GameEngine
     {
         while (CurrentState == State.Playing && !Session.IsFinished)
         {
-            // 자동 플레이는 Update 보다 먼저 눌러야 한다. 고BPM 구간은 판정 범위가 한 프레임보다 짧아서
-            // Update 가 먼저 돌면 프레임 사이에 지나간 타일을 미스로 처리해 버린다.
             var next = Session.Chart.Tiles[Session.CurrentFloor + 1];
-            if (Autoplay && !next.IsMidspin && CurrentTimeMs >= next.TimeMs)
+            if (!next.IsMidspin && CurrentTimeMs >= next.TimeMs)
             {
-                HandleHit(Session.Press(next.TimeMs)!.Value);
-                continue;
+                // 모든 타일을 완벽으로 처리하는 오토
+                if (Autoplay == AutoPlay.Perfect)
+                {
+                    HandleHit(Session.Press(next.TimeMs)!.Value);
+                    continue;
+                }
+                // 플레이어와 똑같은 타이밍을 적용받는 오토
+                else if(Autoplay == AutoPlay.Strict)
+                {
+                    HandleHit(Session.Press(CurrentTimeMs)!.Value);
+                }
             }
 
             var results = Session.Update(CurrentTimeMs);

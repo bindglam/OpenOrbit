@@ -6,7 +6,7 @@ namespace OpenOrbit.Core.Timing;
 /// </summary>
 public sealed record JudgmentWindows
 {
-    public static readonly JudgmentWindows Normal = new();
+    public static readonly JudgmentWindows Strict = new();
 
     public double PerfectDeg { get; init; } = 30;
     public double NearPerfectDeg { get; init; } = 45;

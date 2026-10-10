@@ -28,7 +28,7 @@ public partial class HitErrorMeter : Node2D
 
     private readonly ConcurrentQueue<float> _pending = new(); // 게임 엔진 스레드에서 들어온 오차 (정규화된 값)
     private readonly List<(float Error, double Age)> _ticks = [];
-    private JudgmentWindows _windows = JudgmentWindows.Normal;
+    private JudgmentWindows _windows = JudgmentWindows.Strict;
     private float _average;
     private float _arrow; // 화면에 보이는 화살표 위치 (평균을 부드럽게 따라간다)
     private bool _hasAverage;

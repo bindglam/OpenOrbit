@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://e8bv0ntq2yiu"]
+
+[ext_resource type="Script" uid="uid://det2ruaklhj0g" path="res://scripts/Game.cs" id="1_game"]
+[ext_resource type="AudioStream" uid="uid://b54wkg1dnf67" path="res://assets/sound/hitsound/kick.mp3" id="2_lnu2h"]
+[ext_resource type="PackedScene" uid="uid://c2rjn770aq0ot" path="res://scenes/planet_view.tscn" id="2_yqjtg"]
+
+[node name="Game" type="Node2D" unique_id=1928932634]
+script = ExtResource("1_game")
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="." unique_id=952478657]
+volume_db = -10.0
+
+[node name="HitsoundPlayer" type="AudioStreamPlayer" parent="." unique_id=1670506451]
+stream = ExtResource("2_lnu2h")
+
+[node name="PlanetView" parent="." unique_id=237220379 instance=ExtResource("2_yqjtg")]
+z_index = 1

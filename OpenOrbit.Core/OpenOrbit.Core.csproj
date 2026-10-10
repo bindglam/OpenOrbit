@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+        <!-- Native 프로젝트에서 NativeAOT로 퍼블리시되므로 리플렉션 기반 코드를 경고로 잡아준다 -->
+        <IsAotCompatible>true</IsAotCompatible>
+    </PropertyGroup>
+
+</Project>

@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://c2rjn770aq0ot"]
+
+[ext_resource type="Texture2D" uid="uid://bh4efb8mfxwix" path="res://assets/sprite/ball/red.png" id="1_4w4pe"]
+[ext_resource type="Script" uid="uid://bwca8h4k7gaw3" path="res://scripts/PlanetView.cs" id="1_qc7j1"]
+[ext_resource type="Texture2D" uid="uid://bgiqpyeam6u28" path="res://assets/sprite/ball/blue.png" id="2_qc7j1"]
+
+[node name="PlanetView" type="Node2D" unique_id=237220379]
+script = ExtResource("1_qc7j1")
+
+[node name="Fire" type="Sprite2D" parent="." unique_id=450037554]
+scale = Vector2(0.07, 0.07)
+texture = ExtResource("1_4w4pe")
+
+[node name="Ice" type="Sprite2D" parent="." unique_id=2025096407]
+scale = Vector2(0.07, 0.07)
+texture = ExtResource("2_qc7j1")

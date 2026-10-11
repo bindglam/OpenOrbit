@@ -6,7 +6,6 @@ namespace OpenOrbit.Core.Timing;
 /// 다만 BPM 이 아주 빠르면 각도 범위가 사람이 칠 수 없을 만큼 짧아지므로, 각 범위는 *Ms 이상의 시간을 보장한다
 /// (실제 범위 = max(각도, ms 를 그 BPM 의 각도로 환산한 값)). ms 는 피치까지 반영된 실제 시간 기준.
 /// </para>
-/// TODO: ms 값은 얼불춤 PC 버전(배속 1)의 난이도별 값으로 알고 있는 것. 실제 게임과 대조 필요.
 /// </summary>
 public sealed record JudgmentWindows
 {

@@ -7,6 +7,7 @@ An open-source rhythm game engine compatible with [A Dance of Fire and Ice](http
 
 ## ⭐️ Features
 - Tiles
+  - [x] Normal
   - [x] Midspin
 - Events
   - [x] `SetSpeed`

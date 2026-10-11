@@ -9,7 +9,10 @@ namespace OpenOrbit.Examples.Godot;
 /// <summary>
 /// 얼불춤의 화면 아래 판정 미터. 위로 볼록한 호에 판정 범위를 색으로 칠하고(왼쪽 = 빠름, 오른쪽 = 느림),
 /// 입력할 때마다 그 오차 위치에 눈금을 찍어 서서히 지운다. 호 안쪽의 화살표는 최근 입력의 평균 오차를 가리킨다.
-/// <para>오차는 판정과 같은 각도(도) 기준이라 BPM 이 바뀌어도 눈금 위치가 판정 색과 맞는다.</para>
+/// <para>
+/// 판정 범위는 BPM 에 따라 넓어질 수 있으므로(ms 하한), 눈금은 그 순간의 실제 범위 기준으로 구간별 비율 위치에 찍는다.
+/// 그래서 BPM 이 바뀌어도 눈금이 판정 색과 맞는다.
+/// </para>
 /// </summary>
 public partial class HitErrorMeter : Node2D
 {
@@ -49,17 +52,34 @@ public partial class HitErrorMeter : Node2D
     }
 
     /// <summary>판정 하나를 추가한다. 아무 스레드에서나 호출할 수 있다.</summary>
-    public void Add(HitMargin margin, double errorDeg)
+    /// <param name="msPerDegree">판정한 구간의 1도당 시간(ms). 판정 범위의 ms 하한 계산에 쓴다.</param>
+    public void Add(HitMargin margin, double errorDeg, double msPerDegree)
     {
         if (margin == HitMargin.Auto)
             return;
 
-        // VeryDeg 를 ±1 로. 범위 밖(너무 빠름 / 미스)은 양 끝 빨간 구간 가운데에 찍는다.
-        var error = (float)(errorDeg / _windows.VeryDeg);
+        // 범위 밖(너무 빠름 / 미스)은 양 끝 빨간 구간 가운데에 찍는다.
         if (margin is HitMargin.TooEarly or HitMargin.TooLate)
-            error = Math.Sign(errorDeg) * (1 + TipSize / 2);
-        _pending.Enqueue(Math.Clamp(error, -1 - TipSize, 1 + TipSize));
+        {
+            _pending.Enqueue(Math.Sign(errorDeg) * (1 + TipSize / 2));
+            return;
+        }
+
+        // 실제 범위의 경계를 미터의 색 경계에 맞추고, 그 사이는 비율대로 (VeryDeg 경계 = ±1)
+        var (perfectMark, nearMark) = Marks();
+        var abs = Math.Abs(errorDeg);
+        var perfect = _windows.PerfectDegAt(msPerDegree);
+        var near = _windows.NearPerfectDegAt(msPerDegree);
+        var very = _windows.VeryDegAt(msPerDegree);
+        var position = abs <= perfect ? abs / perfect * perfectMark
+            : abs <= near ? perfectMark + (abs - perfect) / (near - perfect) * (nearMark - perfectMark)
+            : nearMark + (Math.Min(abs, very) - near) / (very - near) * (1 - nearMark);
+        _pending.Enqueue((float)(Math.Sign(errorDeg) * position));
     }
+
+    /// <summary>미터에서 Perfect, E/L Perfect 구간이 끝나는 위치 (Early/Late 구간 끝 = 1). 기본 각도 비율.</summary>
+    private (float Perfect, float Near) Marks() =>
+        ((float)(_windows.PerfectDeg / _windows.VeryDeg), (float)(_windows.NearPerfectDeg / _windows.VeryDeg));
 
     public override void _Process(double delta)
     {
@@ -97,8 +117,7 @@ public partial class HitErrorMeter : Node2D
         DrawArc(Vector2.Zero, Radius, AngleOf(-limit) - 0.03f, AngleOf(limit) + 0.03f, 64, Shadow, Thickness * 3, true);
 
         // 판정 구간 (가운데 → 양 끝)
-        var perfect = (float)(_windows.PerfectDeg / _windows.VeryDeg);
-        var near = (float)(_windows.NearPerfectDeg / _windows.VeryDeg);
+        var (perfect, near) = Marks();
         DrawBand(-perfect, perfect, Palette.ForMargin(HitMargin.Perfect));
         DrawBand(perfect, near, Palette.ForMargin(HitMargin.LatePerfect));
         DrawBand(near, 1, Palette.ForMargin(HitMargin.VeryLate));
@@ -132,6 +151,6 @@ public partial class HitErrorMeter : Node2D
             DrawArc(Vector2.Zero, Radius, AngleOf(-to), AngleOf(-from), 24, color, Thickness, true);
     }
 
-    /// <summary>정규화된 오차(-1 = VeryDeg 만큼 빠름) → 호 위의 각도. 0 이면 바로 위.</summary>
+    /// <summary>미터 위치(-1 = Early 구간 끝) → 호 위의 각도. 0 이면 바로 위.</summary>
     private static float AngleOf(float error) => -Mathf.Pi / 2 + error / (1 + TipSize) * HalfSweep;
 }

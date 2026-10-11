@@ -8,7 +8,7 @@
 script = ExtResource("1_game")
 
 [node name="MusicPlayer" type="AudioStreamPlayer" parent="." unique_id=952478657]
-volume_db = -10.0
+volume_db = -5.0
 
 [node name="HitsoundPlayer" type="AudioStreamPlayer" parent="." unique_id=1670506451]
 stream = ExtResource("2_lnu2h")

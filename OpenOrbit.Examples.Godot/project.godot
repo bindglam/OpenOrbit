@@ -17,6 +17,8 @@ config/icon="res://icon.svg"
 
 [display]
 
+window/size/window_width_override=3840
+window/size/window_height_override=2160
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 

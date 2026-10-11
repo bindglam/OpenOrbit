@@ -185,8 +185,8 @@ public partial class Game : Node2D, IInputEventBus
 
         if (result.Margin != HitMargin.Auto)
         {
-            var tiles = _loaded.Chart.Tiles;
-            _hud.Meter.Add(result.Margin, result.ErrorMs / _loaded.Chart.MsPerDegree(tiles[result.Floor - 1].Bpm));
+            var msPerDegree = _loaded.Chart.MsPerDegree(_loaded.Chart.Tiles[result.Floor - 1].Bpm);
+            _hud.Meter.Add(result.Margin, result.ErrorMs / msPerDegree, msPerDegree);
 
             var position = Coords.ToScreen(_loaded.Chart.Tiles[result.Floor].Position);
             _popups.CallDeferred("add_child",

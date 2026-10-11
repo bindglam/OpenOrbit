@@ -37,8 +37,8 @@ public sealed class GameSession(Chart chart, JudgmentWindows windows)
 
         var target = Chart.Tiles[CurrentFloor + 1];
         var errorMs = songTimeMs - target.TimeMs;
-        var errorDeg = errorMs / Chart.MsPerDegree(Chart.Tiles[CurrentFloor].Bpm);
-        var margin = Windows.Classify(errorDeg);
+        var msPerDegree = Chart.MsPerDegree(Chart.Tiles[CurrentFloor].Bpm);
+        var margin = Windows.Classify(errorMs / msPerDegree, msPerDegree);
 
         var result = new HitResult(target.Floor, margin, errorMs);
         if (margin == HitMargin.TooEarly)
@@ -67,10 +67,9 @@ public sealed class GameSession(Chart chart, JudgmentWindows windows)
             else
             {
                 var errorMs = songTimeMs - target.TimeMs;
-                var errorDeg = errorMs / Chart.MsPerDegree(Chart.Tiles[CurrentFloor].Bpm);
-                if (errorDeg <= Windows.VeryDeg)
+                var msPerDegree = Chart.MsPerDegree(Chart.Tiles[CurrentFloor].Bpm);
+                if (errorMs / msPerDegree <= Windows.VeryDegAt(msPerDegree))
                     break;
-                // TODO: 실제 게임은 미스 시 사망 / 연습 모드는 계속 진행. 지금은 계속 진행.
                 result = new HitResult(target.Floor, HitMargin.TooLate, errorMs);
             }
 

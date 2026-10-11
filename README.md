@@ -1,28 +1,34 @@
-# OpenOrbit
+# ☄️ OpenOrbit
+
+> [!IMPORTANT]
+> This library is under active and heavy development. Breaking changes may occur at any time.
 
 An open-source rhythm game engine compatible with [A Dance of Fire and Ice](https://store.steampowered.com/app/977950/A_Dance_of_Fire_and_Ice/) (ADOFAI) charts, written in C#.
 
-OpenOrbit is split into an engine-agnostic core library and a sample Godot frontend that uses it.
+## ⭐️ Features
+- Tiles
+  - [x] Midspin
+- Events
+  - [x] `SetSpeed`
+    - [x] BPM
+    - [x] multiplier
+  - [x] `Twirl`
+  - [x] `Pause`
+    - [ ] Planet rotation
+  - [ ] `Hold`
+- Judgement
+  - [x] `Lenient`
+  - [x] `Normal`
+  - [x] `Strict`
+  - [x] ~~`Super Strict`~~
+- [x] Threaded game engine
 
-| Project | Description |
-|---|---|
-| `OpenOrbit.Core` | Chart parsing, chart compilation, timing judgment and game loop. No dependencies, AOT-compatible (.NET 10). |
-| `OpenOrbit.Examples.Godot` | A playable Godot 4 game built on top of `OpenOrbit.Core`. |
-
-## Features
-
-- **`.adofai` parsing**: supports both `angleData` and legacy `pathData` charts.
-- **Supported events**: `SetSpeed` (BPM / multiplier), `Twirl`, `Pause`, `Hold`, and midspins. Other events are kept as `UnknownEvent` with their raw JSON.
-- **Chart compilation**: turns a level into tiles with positions, hit times, BPM, rotation direction and travel angles.
-- **Angle-based judgment**: Perfect / Early-Late Perfect / Early-Late / Too Early / Miss, with millisecond lower bounds so windows stay hittable at very high BPM (`Lenient`, `Normal`, `Strict` presets).
-- **Threaded game engine**: judgment runs on its own update thread, independent of the render frame rate. Supports calibration offset, autoplay (`Perfect`, `Strict`) and no-fail mode.
-
-## Requirements
+## 📥 Requirements
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/)
 - [Godot 4.7 (.NET / mono build)](https://godotengine.org/) for the example game
 
-## Getting started
+## 🚀 Getting started
 
 ### Building the core library
 
@@ -49,7 +55,7 @@ dotnet build OpenOrbit.Core
 | `A` | Toggle autoplay |
 | `N` | Toggle no-fail |
 
-## Using the core library
+## 🧑🏻‍💻 Using the core library
 
 ```csharp
 using OpenOrbit.Core;
@@ -82,6 +88,6 @@ To integrate with your own engine or framework, implement two interfaces:
 
 Events such as `Hit` are raised on the engine's update thread, so marshal them to your main thread when touching UI. For rendering, `GameSession.GetPlanetState(timeMs)` returns the pivot and orbiting planet positions at a given song time.
 
-## License
+## 📜 License
 
 [MIT](LICENSE) © 2026 Woobeen Jeon

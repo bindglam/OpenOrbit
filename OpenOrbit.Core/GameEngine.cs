@@ -14,7 +14,8 @@ public sealed class GameEngine
     public GameSession Session { get; }
     public IGameClock Clock { get; }
     public IInputEventBus InputEventBus { get; }
-    
+
+    public int UpdateIntervalMs { get; set; } = 1;
     public double CalibrationMs { get; set; }
     public enum AutoPlay { None, Strict, Perfect }
     public AutoPlay Autoplay { get; set; } = AutoPlay.Perfect;
@@ -52,7 +53,7 @@ public sealed class GameEngine
             while (CurrentState is State.Playing or State.Cleared)
             {
                 Update();
-                Thread.Sleep(1);
+                Thread.Sleep(UpdateIntervalMs);
             }
         })
         {

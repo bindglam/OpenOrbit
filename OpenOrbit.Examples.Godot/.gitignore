@@ -1,8 +1,0 @@
-# Godot 4+ specific ignores
-.godot/
-/android/
-
-charts/
-*.png
-*.ogg
-*.mp3

@@ -17,11 +17,17 @@ An open-source rhythm game engine compatible with [A Dance of Fire and Ice](http
   - [x] `Pause`
     - [ ] Planet rotation
   - [ ] `Hold`
+  - [x] `Multi Planet`
 - Judgement
   - [x] `Lenient`
   - [x] `Normal`
   - [x] `Strict`
   - [x] ~~`Super Strict`~~
+- Platforms:
+  - [x] C#
+  - [ ] Java
+  - [x] Godot Engine
+  - [ ] Unity
 - [x] Threaded game engine
 
 ## 📥 Requirements

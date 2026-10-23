@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://e8bv0ntq2yiu"]
+
+[ext_resource type="Script" uid="uid://det2ruaklhj0g" path="res://addons/OpenOrbit.Godot/examples/test_game/Game.cs" id="1_game"]
+[ext_resource type="AudioStream" uid="uid://wyohnf4tkdn2" path="res://addons/OpenOrbit.Godot/examples/test_game/kick.mp3" id="2_lnu2h"]
+[ext_resource type="Script" uid="uid://bwca8h4k7gaw3" path="res://addons/OpenOrbit.Godot/scripts/PlanetView.cs" id="3_k666e"]
+[ext_resource type="Texture2D" uid="uid://bkv6h5bdvemld" path="res://addons/OpenOrbit.Godot/examples/test_game/white.png" id="4_1v4k2"]
+[ext_resource type="Script" uid="uid://bg63hpn6460rx" path="res://addons/OpenOrbit.Godot/scripts/TrackView.cs" id="4_jt6k6"]
+[ext_resource type="Texture2D" uid="uid://brq4hu7e831pa" path="res://addons/OpenOrbit.Godot/examples/test_game/tile_arm.png" id="5_nxmm6"]
+[ext_resource type="Texture2D" uid="uid://dkrs1naw3exjf" path="res://addons/OpenOrbit.Godot/examples/test_game/tile_joint.png" id="6_1v4k2"]
+[ext_resource type="Texture2D" uid="uid://jomy2uay3hg" path="res://addons/OpenOrbit.Godot/examples/test_game/tile_midspin.png" id="7_k58cv"]
+
+[node name="Game" type="Node2D" unique_id=1928932634]
+script = ExtResource("1_game")
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="." unique_id=952478657]
+volume_db = -10.0
+
+[node name="HitsoundPlayer" type="AudioStreamPlayer" parent="." unique_id=1670506451]
+stream = ExtResource("2_lnu2h")
+volume_db = -5.0
+
+[node name="PlanetView" type="Node2D" parent="." unique_id=51283850]
+z_index = 1
+script = ExtResource("3_k666e")
+PlanetTexture = ExtResource("4_1v4k2")
+metadata/_custom_type_script = "uid://bwca8h4k7gaw3"
+
+[node name="TrackView" type="Node2D" parent="." unique_id=742346206]
+script = ExtResource("4_jt6k6")
+ArmTexture = ExtResource("5_nxmm6")
+JointTexture = ExtResource("6_1v4k2")
+MidspinTexture = ExtResource("7_k58cv")
+metadata/_custom_type_script = "uid://bg63hpn6460rx"

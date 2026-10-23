@@ -23,6 +23,12 @@ public sealed record PauseEvent(int Floor, double Duration) : LevelEvent(Floor);
 public sealed record HoldEvent(int Floor, int Duration) : LevelEvent(Floor);
 
 /// <summary>
+/// 행성 개수 변경 (3공, 4공). 행성들은 한 변이 타일 한 칸인 정다각형을 이루며,
+/// 다음 행성이 그만큼 앞에서 출발하므로 타일마다 회전량이 내각만큼(3공 60°, 4공 90°) 줄어든다.
+/// </summary>
+public sealed record MultiPlanetEvent(int Floor, int Planets) : LevelEvent(Floor);
+
+/// <summary>
 /// 아직 해석하지 않는 이벤트 (장식, 카메라, MultiPlanet 등). 원본 JSON 을 그대로 보관한다.
 /// </summary>
 public sealed record UnknownEvent(int Floor, string EventType, JsonObject Raw) : LevelEvent(Floor);

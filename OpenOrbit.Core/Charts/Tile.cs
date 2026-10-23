@@ -8,8 +8,10 @@ namespace OpenOrbit.Core.Charts;
 /// <param name="Angle">원본 angleData 값 (0번 타일은 0, 미드스핀은 999).</param>
 /// <param name="TimeMs">행성이 이 타일에 도착해야 하는 곡 기준 시각(ms).</param>
 /// <param name="Bpm">이 타일을 떠날 때 적용되는 BPM (피치 미적용).</param>
-/// <param name="EntryAngle">회전하는 행성의 출발 각도(도).</param>
+/// <param name="EntryAngle">회전하는 행성의 출발 각도(도). 3공 이상이면 다각형 내각만큼 앞에서 출발한다.</param>
 /// <param name="TravelAngle">다음 타일까지 회전하는 각도(도). Pause/Hold 포함. 마지막 타일은 0.</param>
+/// <param name="Planets">이 타일을 떠날 때의 행성 개수 (MultiPlanet).</param>
+/// <param name="PivotPlanet">이 타일에서 중심이 되는 행성 번호 (0 = 불, 1 = 얼음, 2.. = 3공, 4공 ...).</param>
 public readonly record struct Tile(
     int Floor,
     double Angle,
@@ -20,7 +22,9 @@ public readonly record struct Tile(
     bool Clockwise,
     double EntryAngle,
     double TravelAngle,
-    double TravelMs)
+    double TravelMs,
+    int Planets = 2,
+    int PivotPlanet = 0)
 {
     public double TravelBeats => TravelAngle / 180.0;
 }

@@ -86,7 +86,8 @@ public sealed class GameSession(Chart chart, JudgmentWindows windows)
         var tile = Chart.Tiles[CurrentFloor];
         var rotated = (songTimeMs - tile.TimeMs) / Chart.MsPerDegree(tile.Bpm);
         var angle = Angles.Normalize(tile.EntryAngle + (tile.Clockwise ? -rotated : rotated));
-        return new PlanetState(tile.Position, tile.Position + Vec2.FromAngle(angle), angle);
+        return new PlanetState(tile.Position, tile.Position + Vec2.FromAngle(angle), angle,
+            tile.Planets, tile.PivotPlanet, tile.Clockwise);
     }
 
     private void Advance(HitResult result)
@@ -96,4 +97,33 @@ public sealed class GameSession(Chart chart, JudgmentWindows windows)
     }
 }
 
-public readonly record struct PlanetState(Vec2 PivotPosition, Vec2 OrbitingPosition, double OrbitingAngle);
+/// <param name="Planets">행성 개수 (MultiPlanet).</param>
+/// <param name="PivotPlanet">중심 행성 번호 (0 = 불, 1 = 얼음, 2.. = 3공, 4공 ...).</param>
+public readonly record struct PlanetState(
+    Vec2 PivotPosition,
+    Vec2 OrbitingPosition,
+    double OrbitingAngle,
+    int Planets = 2,
+    int PivotPlanet = 0,
+    bool Clockwise = true)
+{
+    /// <summary>
+    /// 순서 k 번째 행성의 위치. 0 = 중심, 1 = 회전 중, 2.. = 그다음에 회전할 행성.
+    /// 행성들은 한 변이 타일 한 칸인 정다각형을 이룬다 (얼불춤 scrPlanet 과 같은 배치).
+    /// </summary>
+    public Vec2 PositionAt(int k)
+    {
+        if (k == 0) return PivotPosition;
+        if (k == 1) return OrbitingPosition;
+
+        // 다각형 중심은 회전 방향 반대쪽으로 내각의 절반만큼 돌아간 쪽에 있다
+        var sign = Clockwise ? -1 : 1;
+        var radius = 1 / (2 * Math.Sin(Math.PI / Planets));
+        var centerAngle = OrbitingAngle - sign * Charts.ChartCompiler.InteriorAngle(Planets) / 2;
+        var center = PivotPosition + Vec2.FromAngle(centerAngle) * radius;
+        return center + Vec2.FromAngle(centerAngle + sign * 360.0 * (-k - Planets / 2.0) / Planets) * radius;
+    }
+
+    /// <summary>순서 k 번째 자리에 있는 행성 번호.</summary>
+    public int PlanetAt(int k) => (PivotPlanet + k) % Planets;
+}

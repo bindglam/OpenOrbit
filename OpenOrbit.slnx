@@ -1,6 +1,6 @@
 <Solution>
   <Project Path="OpenOrbit.Core/OpenOrbit.Core.csproj" />
-  <Project Path="OpenOrbit.Examples.Godot/OpenOrbit.Examples.Godot.csproj">
+  <Project Path="OpenOrbit.Godot/OpenOrbit.Godot.csproj">
     <BuildType Project="Debug" />
   </Project>
 </Solution>

@@ -17,6 +17,7 @@ public static class ChartCompiler
 
         var bpm = settings.Bpm;
         var clockwise = true;
+        var planets = 2;
         var time = 0.0; // 0번 타일 기준으로 계산한 뒤, 루프 후에 오프셋 기준으로 옮긴다
         var position = Vec2.Zero;
         var incomingAngle = 0.0; // 마지막으로 실제 이동한 방향. 시작 타일은 0° 로 들어온 것으로 취급
@@ -59,10 +60,23 @@ public static class ChartCompiler
                     case HoldEvent h:
                         extraAngle += h.Duration * 360;
                         break;
+                    case MultiPlanetEvent m:
+                        planets = m.Planets;
+                        break;
                 }
             }
 
+            // 3공 이상: 다음 행성이 다각형 내각만큼 회전 방향 앞에서 출발한다.
+            // 미드스핀 직후에는 원래 돌던 행성이 이어서 돌므로 앞당기지 않는다 (얼불춤과 같음).
             var entryAngle = Angles.Normalize(incomingAngle + 180);
+            if (!isMidspin)
+                entryAngle = Angles.Normalize(entryAngle + (clockwise ? -1 : 1) * InteriorAngle(planets));
+
+            // 미드스핀은 같은 자리(두 칸 앞) 타일의 행성이 다시 중심이 되고, 나머지는 다음 행성이 중심이 된다
+            var pivotPlanet = floor == 0 ? 0
+                : isMidspin && floor >= 2 ? tiles[floor - 2].PivotPlanet
+                : (tiles[floor - 1].PivotPlanet + 1) % planets;
+
             var travelAngle = floor + 1 < tiles.Length
                 ? TravelAngle(entryAngle, level.Angles[floor], clockwise) + extraAngle
                 : 0;
@@ -70,7 +84,7 @@ public static class ChartCompiler
 
             tiles[floor] = new Tile(
                 floor, angle, isMidspin, position, time,
-                bpm, clockwise, entryAngle, travelAngle, travelMs);
+                bpm, clockwise, entryAngle, travelAngle, travelMs, planets, pivotPlanet % planets);
 
             time += travelMs;
         }
@@ -82,6 +96,12 @@ public static class ChartCompiler
 
         return new Chart(level, tiles);
     }
+
+    /// <summary>
+    /// 행성 n 개가 이루는 정다각형의 내각(도). 2공 0°, 3공 60°, 4공 90°.
+    /// 얼불춤 scrMisc.GetInverseAnglePerBeatMultiplanet 과 같은 값.
+    /// </summary>
+    public static double InteriorAngle(int planets) => 180.0 * (planets - 2) / planets;
 
     /// <summary>entry 에서 다음 타일 방향 next 까지 회전량(도). 같은 방향이면 한 바퀴(360°).</summary>
     private static double TravelAngle(double entry, double next, bool clockwise)

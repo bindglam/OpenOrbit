@@ -107,10 +107,28 @@ public static class LevelParser
                 "Twirl" => new TwirlEvent(floor),
                 "Pause" => new PauseEvent(floor, GetDouble(e, "duration", 1)),
                 "Hold" => new HoldEvent(floor, (int)GetDouble(e, "duration", 0)),
+                "MultiPlanet" => new MultiPlanetEvent(floor, GetPlanets(e)),
                 _ => new UnknownEvent(floor, type, e),
             });
         }
         return result;
+    }
+
+    /// <summary>"planets" 는 숫자이거나 "TwoPlanets", "ThreePlanets" 같은 이름. 얼불춤처럼 2~8 개로 제한.</summary>
+    private static int GetPlanets(JsonObject e)
+    {
+        var planets = GetString(e, "planets") switch
+        {
+            "TwoPlanets" => 2,
+            "ThreePlanets" => 3,
+            "FourPlanets" => 4,
+            "FivePlanets" => 5,
+            "SixPlanets" => 6,
+            "SevenPlanets" => 7,
+            "EightPlanets" => 8,
+            _ => (int)GetDouble(e, "planets", 2),
+        };
+        return Math.Clamp(planets, 2, 8);
     }
 
     private static double GetDouble(JsonObject obj, string key, double fallback) =>

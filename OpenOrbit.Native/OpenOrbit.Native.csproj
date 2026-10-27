@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <!-- C ABI 로 함수를 내보내는 공유 라이브러리 (openorbit.dylib / .so / .dll) -->
+        <AssemblyName>openorbit</AssemblyName>
+        <PublishAot>true</PublishAot>
+        <NativeLib>Shared</NativeLib>
+        <InvariantGlobalization>true</InvariantGlobalization>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\OpenOrbit.Core\OpenOrbit.Core.csproj" />
+    </ItemGroup>
+
+</Project>

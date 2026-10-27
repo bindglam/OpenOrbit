@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel target="25" />
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="openorbit.core" options="-Xlint:-restricted" />
+      <module name="openorbit.core.main" options="-Xlint:-restricted" />
+      <module name="openorbit.core.test" options="-Xlint:-restricted" />
+    </option>
+  </component>
+</project>

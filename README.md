@@ -25,7 +25,7 @@ An open-source rhythm game engine compatible with [A Dance of Fire and Ice](http
   - [x] ~~`Super Strict`~~
 - Platforms:
   - [x] C#
-  - [ ] Java
+  - [x] Java (via NativeAOT + FFM)
   - [x] Godot Engine
   - [ ] Unity
 - [x] Threaded game engine
@@ -42,6 +42,39 @@ An open-source rhythm game engine compatible with [A Dance of Fire and Ice](http
 ```sh
 dotnet build OpenOrbit.Core
 ```
+
+### Using from Java
+
+`OpenOrbit.Native` exports a C API from the core with NativeAOT, and `OpenOrbit.Java/core` binds it with the FFM API (Java 25+).
+
+```sh
+cd OpenOrbit.Java
+./gradlew :core:publishNative   # NativeAOT build for this OS/arch → ../OpenOrbit.Native/bin/publish/<rid>/
+./gradlew build                 # core jar (and the example plugin) with natives/<rid>/ bundled
+```
+
+NativeAOT can't cross-compile between operating systems, so run `publishNative` on each target OS and collect the `bin/publish/<rid>/` folders before building the jar.
+Run with `--enable-native-access=ALL-UNNAMED` (or your module name) to silence the restricted-method warning.
+
+```java
+try (var chart = Chart.load(Path.of("level.adofai"));
+     var session = new GameSession(chart, JudgmentWindows.STRICT)) {
+    session.update(songTimeMs, result -> { /* auto-passed midspins, misses */ });
+    HitResult hit = session.press(songTimeMs);
+    PlanetState planets = session.planetState(songTimeMs);
+}
+```
+
+### Minecraft plugin example
+
+`OpenOrbit.Java/examples/minecraft-plugin` is a Paper 26.1 plugin that plays ADOFAI charts in Minecraft.
+
+1. Build it with `./gradlew :examples:minecraft-plugin:build` → `build/libs/OpenOrbit-<version>.jar`, or run a test server with `./gradlew :examples:minecraft-plugin:runServer`.
+2. Put chart folders (the `.adofai` file and its `.ogg` song) in `plugins/OpenOrbit/charts/`.
+3. `/adofai play <chart>` to play, `/adofai auto <chart>` to watch autoplay, `/adofai stop`, `/adofai list`, `/adofai offset [ms]`.
+
+Any movement key (WASD, Space, Shift, Ctrl) or left click is a hit. Songs are sent to the client as a generated resource pack served by a built-in HTTP server (`resource-pack.public-url` in `config.yml`); only `.ogg` songs can be played.
+The vanilla client sends input at 20 Hz, so timing is coarser than the real game; `lenient` judgment is the default.
 
 ### Running the example game
 

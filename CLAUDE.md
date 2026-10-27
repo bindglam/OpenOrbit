@@ -9,8 +9,11 @@ OpenOrbit is a rhythm game engine that plays A Dance of Fire and Ice (ADOFAI, ì–
 ```sh
 dotnet build OpenOrbit.slnx          # build everything (Core + Godot example)
 dotnet build OpenOrbit.Core          # core library only
+dotnet publish OpenOrbit.Native -c Release -r osx-arm64 -o OpenOrbit.Native/bin/publish/osx-arm64   # native lib for Java
 ```
 
+- Java: `OpenOrbit.Java` is a multi-project Gradle build (Java 25, wrapper pinned to 9.6 because run-paper 3.0.2 fails on 9.8). `./gradlew :core:publishNative` runs the publish above for the host RID; `./gradlew build` bundles `bin/publish/<rid>/openorbit.*` into the jars.
+- Minecraft test server: `./gradlew :examples:minecraft-plugin:runServer` (Paper 26.1.2, run dir `examples/minecraft-plugin/run/`).
 - Run the example game: open `OpenOrbit.Examples.Godot/project.godot` in Godot 4.7 (.NET build). The binary is at `/Applications/Godot.app/Contents/MacOS/Godot`.
 - Run log: `~/Library/Application Support/Godot/app_userdata/OpenOrbit.Examples.Godot/logs/`. Godot thread-guard errors show up here.
 - Saved settings (offset, last chart): `user://settings.cfg` in that same directory.
@@ -20,13 +23,22 @@ dotnet build OpenOrbit.Core          # core library only
 
 ## Architecture
 
-There are two projects (`OpenOrbit.slnx`), both on .NET 10:
+The .NET projects (`OpenOrbit.slnx`) are all on .NET 10:
 
 - **`OpenOrbit.Core`**:
   - Engine-agnostic: no dependencies, and `IsAotCompatible` is set, so avoid reflection.
 - **`OpenOrbit.Examples.Godot`**:
   - A playable Godot 4.7 frontend that references Core.
   - Namespace `OpenOrbit.Examples.Godot`.
+- **`OpenOrbit.Native`**:
+  - NativeAOT shared library (`openorbit.dylib/.so/.dll`) exporting a C ABI (`oo_*`) over `GameSession`, not `GameEngine` (no cross-runtime callbacks or threads).
+  - Objects are `GCHandle` handles; failures return negative `OoStatus` with a thread-local `oo_last_error`.
+  - Struct layouts in `NativeTypes.cs` must match `Native.java` in `OpenOrbit.Java`.
+- **`OpenOrbit.Java`** (Gradle, outside the solution):
+  - `core`: FFM (`java.lang.foreign`) bindings, package `io.github.bindglam.openorbit`. Loads the library from `-Dopenorbit.library.path`, then `natives/<rid>/` in the jar, then the OS search path.
+  - `examples/minecraft-plugin`: Paper plugin (`io.github.bindglam.openorbit.minecraft`). Renders the chart with per-player display entities, mounts the player on a camera entity, takes movement-key edges (`PlayerInputEvent`) and arm swings as hits, and serves each `.ogg` song as a generated resource pack over a built-in HTTP server. The song clock is `System.nanoTime`, not server ticks.
+    - Each `Game` runs judgment (misses, midspins, autoplay) and particle trails on its own thread every 1 ms under `Game.lock`; the main thread only handles input events and moves entities in `render()` (Bukkit entity calls must stay on the main thread). Sounds, titles and particles are sent straight from the game thread.
+    - Twirl/SetSpeed markers are derived from `Tile.clockwise`/`Tile.bpm` changes against the previous tile, not from raw events.
 
 ### Core pipeline
 

@@ -3,4 +3,5 @@
   <Project Path="OpenOrbit.Godot/OpenOrbit.Godot.csproj">
     <BuildType Project="Debug" />
   </Project>
+  <Project Path="OpenOrbit.Native/OpenOrbit.Native.csproj" />
 </Solution>

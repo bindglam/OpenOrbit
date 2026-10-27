@@ -1,0 +1,34 @@
+# 판정: lenient | normal | strict | super_strict
+# 마인크래프트 클라이언트는 입력을 20틱(50ms) 단위로 보내므로 lenient 를 권장한다.
+judgment: lenient
+
+# true 면 미스가 나도 실패하지 않는다
+no-fail: false
+
+# 타일 한 칸의 크기(블록)
+scale: 2.0
+
+# 카메라가 타일 위로 떠 있는 높이(블록)
+camera-height: 14.0
+
+# 무대가 플레이어 위치보다 얼마나 위에 만들어지는지(블록)
+stage-height: 40
+
+# 현재 타일 기준 앞/뒤로 그릴 타일 수
+render-ahead: 32
+render-behind: 8
+
+# 곡이 실제로 들리기 시작할 때까지의 지연(ms). 화면과 판정이 모두 이만큼 늦게 간다.
+audio-latency-ms: 0
+
+# 플레이어별 입력 오프셋 기본값(ms). 양수면 입력을 그만큼 이른 것으로 본다.
+# 클라이언트 틱(평균 25ms) + 핑만큼 늦게 도착하므로 보통 양수가 맞다. /adofai offset 으로 바꿀 수 있다.
+default-input-offset-ms: 50
+
+resource-pack:
+  # 곡(.ogg)을 리소스팩으로 만들어 내장 HTTP 서버로 보낸다. false 면 음악 없이 플레이한다.
+  enabled: true
+  # 내장 HTTP 서버 포트
+  port: 8765
+  # 클라이언트가 접속할 주소. 외부에서 접속하면 서버의 공인 주소로 바꿔야 한다.
+  public-url: "http://localhost:8765"

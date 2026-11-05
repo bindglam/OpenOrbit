@@ -7,7 +7,7 @@ namespace OpenOrbit.Core.Charts;
 
 /// <summary>
 /// <see cref="Level"/> → <see cref="Chart"/>. 각 타일의 위치, 회전량, 판정 시각을 계산하고
-/// 트랙 장식 타임라인(<see cref="TrackTimeline"/>)을 만든다.
+/// 트랙 장식 타임라인(<see cref="TrackTimeline"/>)과 카메라 타임라인(<see cref="CameraTimeline"/>)을 만든다.
 /// </summary>
 public static class ChartCompiler
 {
@@ -110,7 +110,7 @@ public static class ChartCompiler
         for (var floor = 0; floor < tiles.Length; floor++)
             tiles[floor] = tiles[floor] with { TimeMs = tiles[floor].TimeMs + shift };
 
-        return new Chart(level, tiles, TrackTimeline.Build(level, tiles, shapes));
+        return new Chart(level, tiles, TrackTimeline.Build(level, tiles, shapes), CameraTimeline.Build(level, tiles));
     }
 
     /// <summary>

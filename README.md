@@ -23,6 +23,8 @@ An open-source rhythm game engine compatible with [A Dance of Fire and Ice](http
     - [x] `Move Track`
     - [x] `Animate Track` (appear/disappear shapes are approximations)
     - [x] `Position Track`
+  - Camera (computed in the core, drawn by the Godot example)
+    - [x] `Move Camera` (position, rotation, zoom; `LastPositionNoRotation` is treated as `LastPosition`)
 - Judgement
   - [x] `Lenient`
   - [x] `Normal`

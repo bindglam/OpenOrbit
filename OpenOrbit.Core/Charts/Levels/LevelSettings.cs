@@ -1,4 +1,6 @@
+using OpenOrbit.Core.Charts.Levels.Events;
 using OpenOrbit.Core.Charts.Track;
+using OpenOrbit.Core.Geometry;
 
 namespace OpenOrbit.Core.Charts.Levels;
 
@@ -32,4 +34,16 @@ public sealed record LevelSettings
 
     /// <summary>켜져 있으면 MoveTrack 으로 움직인 타일 위에 행성도 같이 움직여서 그린다.</summary>
     public bool StickToFloors { get; init; }
+
+    /// <summary>카메라 초기 기준 (Tile 이면 0번 타일).</summary>
+    public CameraRelativeTo CameraRelativeTo { get; init; } = CameraRelativeTo.Player;
+
+    /// <summary>카메라 초기 오프셋(타일 단위).</summary>
+    public Vec2 CameraPosition { get; init; } = Vec2.Zero;
+
+    /// <summary>카메라 초기 회전(도, 반시계 방향).</summary>
+    public double CameraRotation { get; init; }
+
+    /// <summary>카메라 초기 줌. 1 = 100%, 클수록 넓게 보인다.</summary>
+    public double CameraZoom { get; init; } = 1;
 }

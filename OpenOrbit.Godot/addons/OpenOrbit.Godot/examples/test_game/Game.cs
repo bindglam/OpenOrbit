@@ -5,6 +5,7 @@ using System.Linq;
 using Godot;
 using OpenOrbit.Godot;
 using OpenOrbit.Core;
+using OpenOrbit.Core.Geometry;
 using OpenOrbit.Core.Timing;
 
 namespace OpenOrbit.Godot.Examples.TestGame;
@@ -19,7 +20,13 @@ public partial class Game : Node2D, IInputEventBus
     [Export] public bool Autoplay { get; set; }
 
     private const string SettingsPath = "user://settings.cfg";
-    private const float CameraZoom = 0.75f;
+    /// <summary>
+    /// 카메라 줌 100% 일 때 화면 높이에 들어가는 타일 수.
+    /// 얼불춤 실제 값을 확인하지 못해 어림한 값이다 (직교 카메라 높이 10 유닛, 타일 간격 1.5 유닛으로 가정).
+    /// </summary>
+    private const float TilesPerScreenHeight = 6.5f;
+    /// <summary>카메라가 플레이어를 따라가는 빠르기 (1/초).</summary>
+    private const double CameraFollowRate = 5;
 
     private LoadedChart _loaded = null!;
     private bool _hasChart;
@@ -36,6 +43,7 @@ public partial class Game : Node2D, IInputEventBus
     private PlanetView _planets = null!;
     private Node2D _popups = null!;
     private Camera2D _camera = null!;
+    private Vec2 _cameraFollow; // 카메라가 따라가는, 플레이어 위치를 부드럽게 만든 값 (Core 좌표)
     private Hud _hud = null!;
     private FileDialog _openDialog = null!;
     
@@ -53,7 +61,7 @@ public partial class Game : Node2D, IInputEventBus
         _track = GetNode<TrackView>("TrackView");
         _planets = GetNode<PlanetView>("PlanetView");
         AddChild(_popups = new Node2D());
-        AddChild(_camera = new Camera2D { Zoom = Vector2.One * CameraZoom });
+        AddChild(_camera = new Camera2D { IgnoreRotation = false });
         AddChild(_hud = new Hud());
         AddChild(_openDialog = CreateOpenDialog());
         _clock = new SongClock(_music);
@@ -143,7 +151,8 @@ public partial class Game : Node2D, IInputEventBus
         
         _track.CurrentFloor = 0;
         _track.SongTimeMs = _engine.CurrentTimeMs;
-        _camera.Position = Coords.ToScreen(_loaded.Chart.Tiles[0].Position);
+        _cameraFollow = _loaded.Chart.Tiles[0].Position;
+        UpdateCamera(_engine.CurrentTimeMs);
     }
 
     public void StartPlaying()
@@ -182,13 +191,27 @@ public partial class Game : Node2D, IInputEventBus
         _track.SongTimeMs = time;
 
         // stickToFloors 면 행성과 카메라가 MoveTrack 으로 움직인 타일을 따라간다
-        var shift = _track.StickToFloors ? _track.TileOffset(floor) : Vector2.Zero;
-        _planets.Set(_engine.Session.GetPlanetState(time), shift);
+        var shift = _track.StickToFloors ? _loaded.Chart.Track.Evaluate(floor, time).Offset : Vec2.Zero;
+        var planets = _engine.Session.GetPlanetState(time);
+        _planets.Set(planets, Coords.ToScreen(shift));
 
-        var target = Coords.ToScreen(_loaded.Chart.Tiles[floor].Position) + shift;
-        _camera.Position = _camera.Position.Lerp(target, (float)(1 - Math.Exp(-delta * 5)));
+        // 플레이어를 따라가는 카메라는 플레이어 위치를 부드럽게 만들어서 넘긴다 (고정 카메라는 영향 없음)
+        var player = planets.PivotPosition + shift;
+        var follow = 1 - Math.Exp(-delta * CameraFollowRate);
+        _cameraFollow += (player - _cameraFollow) * follow;
+        UpdateCamera(time);
 
         UpdateHud(_engine.CurrentTimeMs);
+    }
+
+    /// <summary>settings 와 MoveCamera 로 정해진 카메라를 적용한다.</summary>
+    private void UpdateCamera(double time)
+    {
+        var camera = _loaded.Chart.Camera.Evaluate(time, _cameraFollow);
+        _camera.Position = Coords.ToScreen(camera.Position);
+        _camera.Rotation = -Mathf.DegToRad((float)camera.Rotation); // Core 는 반시계, 화면은 Y 가 아래라 반대
+        var zoom = GetViewportRect().Size.Y / (TilesPerScreenHeight * Coords.UnitPx * (float)Math.Max(camera.Zoom, 0.01));
+        _camera.Zoom = Vector2.One * zoom;
     }
 
     private void Hit(HitResult result)

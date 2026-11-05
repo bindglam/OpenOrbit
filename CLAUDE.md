@@ -33,7 +33,7 @@ The .NET projects (`OpenOrbit.slnx`) are all on .NET 10:
 
 - **Level parsing:**
   - Handles both `angleData` and legacy `pathData`.
-  - Typed events: gameplay (`SetSpeed`, `Twirl`, `Pause`, `Hold`, `MultiPlanet`) and track (`ColorTrack`, `RecolorTrack`, `MoveTrack`, `AnimateTrack`, `PositionTrack`). Everything else is kept as `UnknownEvent` with its raw JSON.
+  - Typed events: gameplay (`SetSpeed`, `Twirl`, `Pause`, `Hold`, `MultiPlanet`) and track (`ColorTrack`, `RecolorTrack`, `MoveTrack`, `AnimateTrack`, `PositionTrack`), plus `MoveCamera`. Everything else is kept as `UnknownEvent` with its raw JSON.
   - Some real levels still fail to parse (duplicate keys, raw control characters inside strings); `System.Text.Json` rejects both.
 - **Chart compilation:** precomputes each tile's position (1 unit = one tile, +Y up), arrival `TimeMs`, BPM, rotation direction, entry angle and travel angle.
   - `PositionTrack` (unless `editorOnly`) moves tile positions here, so the planet path follows it; angles and timing are unchanged.
@@ -43,6 +43,9 @@ The .NET projects (`OpenOrbit.slnx`) are all on .NET 10:
   - MoveTrack values are absolute targets relative to the original tile; `null` axes are left alone. Overlapping tweens hand off: a new tween starts from whatever the previous one shows at that moment.
   - Beat counts for appear/disappear are measured in planet rotation (1 beat = 180°), so they survive BPM changes and pauses.
   - Not verified against ADOFAI: the appear/disappear animation shapes and their 1-beat length, Blink/Rainbow formulas, `gapLength` (treated as tiles skipped between targets), `Volume` color (falls back to the primary color), and Flash eases (linear).
+- **Camera timeline** (`Chart.Camera`, `CameraTimeline.Evaluate(songTimeMs, player)` → `CameraState`): settings `relativeTo`/`position`/`rotation`/`zoom` plus timed `MoveCamera` (zoom stored as 1 = 100%).
+  - `Player`-relative segments follow the `player` position the caller passes in, so renderers smooth that position themselves. `Tile` anchors to the event's floor, `Global` to the origin, `LastPosition` adds to the previous offset. `null` values carry over; tweens hand off like MoveTrack.
+  - Not verified against ADOFAI: `LastPositionNoRotation` (same as `LastPosition`), a null axis when `relativeTo` changes (0), and how many tiles 100% zoom shows (the Godot example assumes 6.5 vertically).
 - **Midspins** (`Angle == 999`):
   - The tile before a midspin is a dead end that the planet only touches.
   - The midspin tile itself is placed one cell *back* (at tile k-1's position), and the incoming direction is reversed.

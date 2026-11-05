@@ -66,6 +66,10 @@ public static class LevelParser
             TrackDisappearAnimation = GetEnum(s, "trackDisappearAnimation", defaults.TrackDisappearAnimation),
             BeatsBehind = GetDouble(s, "beatsBehind", defaults.BeatsBehind),
             StickToFloors = GetBool(s, "stickToFloors", defaults.StickToFloors),
+            CameraRelativeTo = GetEnum(s, "relativeTo", defaults.CameraRelativeTo),
+            CameraPosition = GetPair(s, "position") is var (x, y) ? new Vec2(x ?? 0, y ?? 0) : defaults.CameraPosition,
+            CameraRotation = GetDouble(s, "rotation", defaults.CameraRotation),
+            CameraZoom = GetDouble(s, "zoom", defaults.CameraZoom * 100) / 100,
         };
     }
 
@@ -130,6 +134,16 @@ public static class LevelParser
                     GetEnum(e, "ease", Ease.Linear),
                     GetDouble(e, "angleOffset", 0)),
                 "MoveTrack" => ParseMoveTrack(floor, e),
+                "MoveCamera" => new MoveCameraEvent(
+                    floor,
+                    GetDouble(e, "duration", 1),
+                    GetNullableEnum<CameraRelativeTo>(e, "relativeTo"),
+                    GetPair(e, "position").X,
+                    GetPair(e, "position").Y,
+                    GetNullableDouble(e, "rotation"),
+                    GetNullableDouble(e, "zoom") / 100,
+                    GetEnum(e, "ease", Ease.Linear),
+                    GetDouble(e, "angleOffset", 0)),
                 "AnimateTrack" => new AnimateTrackEvent(
                     floor,
                     GetNullableEnum<TrackAppearAnimation>(e, "trackAnimation"),

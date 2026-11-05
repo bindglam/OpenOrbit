@@ -43,11 +43,12 @@ public partial class TrackView : Node2D
     private const float PassedBrightness = 0.25f;
 
     /// <summary>
-    /// 타일 셰이더. 덮는 사각형의 픽셀마다 <see cref="FloorGeometry"/> 와 같은 거리 함수로 모양, 테두리 깊이, 그림자를 정한다
+    /// 타일 셰이더 (floor.gdshader). 덮는 사각형의 픽셀마다 <see cref="FloorGeometry"/> 와 같은 거리 함수로 모양, 테두리 깊이, 그림자를 정한다
     /// (두 코드는 함께 고쳐야 한다). 모양 값은 데이터 텍스처(shape_data)에 있고, UV 는 그 위치와 무늬 변형 번호다.
     /// 좌표는 메시 기준 얼불춤 유닛이라 타일이 움직이거나 돌아도 무늬가 따라간다.
     /// </summary>
-    private 
+    /// <remarks>.uid 파일은 저장소에 없어서 uid 가 아니라 경로로 불러온다.</remarks>
+    private const string FloorShaderPath = "res://addons/OpenOrbit.Godot/floor.gdshader";
 
     /// <summary>Standard 테두리 그라데이션 (위 = 타일 가장자리). 비워 두면 비슷한 기본값을 만든다. 다른 스타일 테두리도 같다.</summary>
     [Export] public Texture2D? BorderTexture { get; set; }
@@ -356,7 +357,7 @@ public partial class TrackView : Node2D
     /// <summary>스타일마다 머티리얼 하나.</summary>
     private void CreateMaterials(Chart chart)
     {
-        _shader ??= new Shader { Code = FloorShader };
+        _shader ??= GD.Load<Shader>(FloorShaderPath);
         var customShadow = chart.Level.Settings.TrackShadowColor;
         foreach (var style in Enum.GetValues<TrackStyle>())
         {

@@ -26,7 +26,7 @@ A playable Godot 4.7 frontend that references Core. The Godot game uses the `Str
   - Passed tiles are darkened by multiplying the color (`DimPassedTiles`, not an ADOFAI feature).
   - Earlier tiles draw on top (draw index `n - i`), as in ADOFAI. Every floor is its own item; a midspin floor simply overlaps the tile it shares a position with.
   - Tiles are `FloorMesh` quads. One `ArrayMesh` per `FloorGeometry` and surface variant is shared by all tiles of that shape in a chart and rotated per tile by the mesh command's transform.
-  - The shader repeats `FloorGeometry`'s distance function per pixel; keep the two in sync. Shape values live in a float data texture (`shape_data`, two texels per shape, numbered per chart). The quad's UV holds only small integers (the texel column, plus the variant and row), because Godot 2D mesh UVs don't carry large values exactly; mesh `CUSTOM0` data doesn't reach canvas shaders either.
+  - The shader (`addons/OpenOrbit.Godot/floor.gdshader`, loaded by `res://` path because `.uid` files are gitignored) repeats `FloorGeometry`'s distance function per pixel; keep the two in sync. Shape values live in a float data texture (`shape_data`, two texels per shape, numbered per chart). The quad's UV holds only small integers (the texel column, plus the variant and row), because Godot 2D mesh UVs don't carry large values exactly; mesh `CUSTOM0` data doesn't reach canvas shaders either.
   - Edges are not antialiased: blending would show gaps where tiles join.
   - Style changes re-record only that tile's mesh command and material. There is one material per track style with the values from `scrFloor.SetTrackStyle`:
     - Standard: noise and the surface pattern, border × 1.23, black shadow at 45%.

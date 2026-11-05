@@ -73,6 +73,13 @@ final class Native {
             JAVA_INT.withName("clockwise"),
             MemoryLayout.paddingLayout(4));
 
+    static final StructLayout ENGINE_EVENT = MemoryLayout.structLayout(
+            JAVA_DOUBLE.withName("errorMs"),
+            JAVA_INT.withName("floor"),
+            JAVA_INT.withName("margin"),
+            JAVA_INT.withName("kind"),
+            MemoryLayout.paddingLayout(4));
+
     static long offset(StructLayout layout, String field) {
         return layout.byteOffset(groupElement(field));
     }
@@ -105,6 +112,21 @@ final class Native {
     static final MethodHandle SESSION_RESULT_COUNT = fn("oo_session_result_count", JAVA_INT, JAVA_LONG);
     static final MethodHandle SESSION_GET_RESULTS = fn("oo_session_get_results", JAVA_INT, JAVA_LONG, JAVA_INT, JAVA_INT, ADDRESS);
     static final MethodHandle SESSION_GET_PLANET_STATE = fn("oo_session_get_planet_state", JAVA_INT, JAVA_LONG, JAVA_DOUBLE, ADDRESS);
+
+    static final MethodHandle ENGINE_CREATE = fn("oo_engine_create", JAVA_INT, JAVA_LONG, ADDRESS, ADDRESS);
+    static final MethodHandle ENGINE_DESTROY = fnVoid("oo_engine_destroy", JAVA_LONG);
+    static final MethodHandle ENGINE_SET_AUTOPLAY = fn("oo_engine_set_autoplay", JAVA_INT, JAVA_LONG, JAVA_INT);
+    static final MethodHandle ENGINE_SET_NO_FAIL = fn("oo_engine_set_no_fail", JAVA_INT, JAVA_LONG, JAVA_INT);
+    static final MethodHandle ENGINE_SET_CALIBRATION_MS = fn("oo_engine_set_calibration_ms", JAVA_INT, JAVA_LONG, JAVA_DOUBLE);
+    static final MethodHandle ENGINE_START = fn("oo_engine_start", JAVA_INT, JAVA_LONG);
+    static final MethodHandle ENGINE_RESET = fn("oo_engine_reset", JAVA_INT, JAVA_LONG);
+    static final MethodHandle ENGINE_FAIL = fn("oo_engine_fail", JAVA_INT, JAVA_LONG);
+    static final MethodHandle ENGINE_PRESS = fn("oo_engine_press", JAVA_INT, JAVA_LONG);
+    static final MethodHandle ENGINE_STATE = fn("oo_engine_state", JAVA_INT, JAVA_LONG);
+    static final MethodHandle ENGINE_CURRENT_TIME_MS = fn("oo_engine_current_time_ms", JAVA_DOUBLE, JAVA_LONG);
+    static final MethodHandle ENGINE_CURRENT_FLOOR = fn("oo_engine_current_floor", JAVA_INT, JAVA_LONG);
+    static final MethodHandle ENGINE_GET_PLANET_STATE = fn("oo_engine_get_planet_state", JAVA_INT, JAVA_LONG, JAVA_DOUBLE, ADDRESS);
+    static final MethodHandle ENGINE_WAIT_EVENTS = fn("oo_engine_wait_events", JAVA_INT, JAVA_LONG, ADDRESS, JAVA_INT, JAVA_INT);
 
     private static MethodHandle fn(String name, MemoryLayout result, MemoryLayout... args) {
         return LINKER.downcallHandle(find(name), FunctionDescriptor.of(result, args));

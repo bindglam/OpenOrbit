@@ -21,7 +21,8 @@ The .NET projects (`OpenOrbit.slnx`) are all on .NET 10:
   - Engine-agnostic: no dependencies, and `IsAotCompatible` is set, so avoid reflection.
 - **`OpenOrbit.Godot`**: a playable Godot 4.7 frontend that references Core.
 - **`OpenOrbit.Native`**:
-  - NativeAOT shared library (`openorbit.dylib/.so/.dll`) exporting a C ABI (`oo_*`) over `GameSession`, not `GameEngine` (no cross-runtime callbacks or threads).
+  - NativeAOT shared library (`openorbit.dylib/.so/.dll`) exporting a C ABI (`oo_*`) over `GameSession` and `GameEngine`.
+  - Never call back into the host: the engine gets a built-in `MonotonicClock` and a no-op input bus, input comes in through `oo_engine_press`, and engine events are queued for `oo_engine_wait_events` instead of invoked across the boundary.
   - Objects are `GCHandle` handles; failures return negative `OoStatus` with a thread-local `oo_last_error`.
   - Struct layouts in `NativeTypes.cs` must match `Native.java` in `OpenOrbit.Java`.
 - **`OpenOrbit.Java`** (Gradle, outside the solution): FFM bindings over `OpenOrbit.Native` plus a Minecraft plugin example.

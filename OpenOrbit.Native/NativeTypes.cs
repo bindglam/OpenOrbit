@@ -158,3 +158,34 @@ public static class OoStatus
     public const int IoError = -4;
     public const int InternalError = -5;
 }
+
+/// <summary>엔진 이벤트 종류.</summary>
+public static class OoEngineEventKind
+{
+    public const int Hit = 0;
+    public const int Cleared = 1;
+    public const int Failed = 2;
+}
+
+/// <summary>24 바이트. Kind 가 Hit 일 때만 판정 필드가 의미 있다.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct OoEngineEvent
+{
+    public double ErrorMs;
+    public int Floor;
+    /// <summary><see cref="HitMargin"/> 값.</summary>
+    public int Margin;
+    /// <summary><see cref="OoEngineEventKind"/> 값.</summary>
+    public int Kind;
+    private int _padding;
+
+    public static OoEngineEvent FromHit(in HitResult r) => new()
+    {
+        ErrorMs = r.ErrorMs,
+        Floor = r.Floor,
+        Margin = (int)r.Margin,
+        Kind = OoEngineEventKind.Hit,
+    };
+
+    public static OoEngineEvent Of(int kind) => new() { Kind = kind };
+}

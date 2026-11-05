@@ -56,14 +56,30 @@ cd OpenOrbit.Java
 NativeAOT can't cross-compile between operating systems, so run `publishNative` on each target OS and collect the `bin/publish/<rid>/` folders before building the jar.
 Run with `--enable-native-access=ALL-UNNAMED` (or your module name) to silence the restricted-method warning.
 
+`GameEngine` runs judgment on its own native thread against a built-in monotonic song clock (0 ms at `start()`). Results are queued instead of called back, so no native code ever calls into Java:
+
 ```java
 try (var chart = Chart.load(Path.of("level.adofai"));
-     var session = new GameSession(chart, JudgmentWindows.STRICT)) {
-    session.update(songTimeMs, result -> { /* auto-passed midspins, misses */ });
-    HitResult hit = session.press(songTimeMs);
-    PlanetState planets = session.planetState(songTimeMs);
+     var engine = new GameEngine(chart, JudgmentWindows.STRICT)) {
+    engine.setCalibrationMs(audioLatencyMs);
+    engine.start();                     // start the song at the same moment
+
+    engine.press();                     // from your input handler, any thread
+
+    // on a thread of your own: block up to 15 ms for hits, clears and failures
+    engine.awaitEvents(15, event -> {
+        switch (event) {
+            case EngineEvent.Hit hit -> { /* hit.result() */ }
+            case EngineEvent.Cleared c -> { }
+            case EngineEvent.Failed f -> { }
+        }
+    });
+
+    PlanetState planets = engine.planetState();   // for rendering
 }
 ```
+
+If you want to drive time yourself, `GameSession` exposes the pure judgment logic (`update(songTimeMs, ...)`, `press(songTimeMs)`, `planetState(songTimeMs)`) with no threads or clock.
 
 ### Minecraft plugin example
 

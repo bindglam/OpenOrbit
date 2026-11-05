@@ -224,7 +224,7 @@ final class GameManager implements Listener {
             return;
         var game = games.get(event.getPlayer().getUniqueId());
         if (game != null)
-            game.press(System.nanoTime());
+            game.press();
     }
 
     /** 쉬프트도 입력이므로 플레이 중에는 카메라에서 내리지 않는다. */

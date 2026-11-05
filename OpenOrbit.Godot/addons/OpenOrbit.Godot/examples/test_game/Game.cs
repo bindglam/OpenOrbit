@@ -20,11 +20,6 @@ public partial class Game : Node2D, IInputEventBus
     [Export] public bool Autoplay { get; set; }
 
     private const string SettingsPath = "user://settings.cfg";
-    /// <summary>
-    /// 카메라 줌 100% 일 때 화면 높이에 들어가는 타일 수.
-    /// 얼불춤 카메라 높이는 10 유닛(scrCamera.camsizenormal 5 × 2), 타일 한 칸은 1.5 유닛이다.
-    /// </summary>
-    private const float TilesPerScreenHeight = 10f / (float)OpenOrbit.Core.Charts.Track.TrackTimeline.UnitsPerTile;
     /// <summary>타일에 내린 뒤 카메라가 행성까지 가는 데 걸리는 박 수 (scrCamera.camspeed).</summary>
     private const double CameraFollowBeats = 2;
 
@@ -132,6 +127,8 @@ public partial class Game : Node2D, IInputEventBus
         _music.Stream = loaded.Song;
         _music.PitchScale = (float)(loaded.Chart.Level.Settings.Pitch / 100.0);
         _track.Setup(loaded.Chart);
+        // 행성 크기는 얼불춤 유닛으로 정해져 있어서 짧은 타일이면 타일에 비해 커진다
+        _planets.SizeScale = 1.5f / (float)loaded.Chart.UnitsPerTile;
         Reset();
         return true;
     }
@@ -228,7 +225,9 @@ public partial class Game : Node2D, IInputEventBus
         var camera = _loaded.Chart.Camera.Evaluate(time, player);
         _camera.Position = Coords.ToScreen(camera.Position);
         _camera.Rotation = -Mathf.DegToRad((float)camera.Rotation); // Core 는 반시계, 화면은 Y 가 아래라 반대
-        var zoom = GetViewportRect().Size.Y / (TilesPerScreenHeight * Coords.UnitPx * (float)Math.Max(camera.Zoom, 0.01));
+        // 얼불춤 줌 100% 는 화면 높이에 10 유닛이 보인다 (scrCamera.camsizenormal 5 × 2; 긴 타일이면 6.67 칸, 짧은 타일이면 10 칸)
+        var tilesPerScreenHeight = 10f / (float)_loaded.Chart.UnitsPerTile;
+        var zoom = GetViewportRect().Size.Y / (tilesPerScreenHeight * Coords.UnitPx * (float)Math.Max(camera.Zoom, 0.01));
         _camera.Zoom = Vector2.One * zoom;
     }
 

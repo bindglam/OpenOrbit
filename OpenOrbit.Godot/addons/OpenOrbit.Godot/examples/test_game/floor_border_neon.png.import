@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://jomy2uay3hg"
-path="res://.godot/imported/tile_midspin.png-90d2f15103e0c05ed76214cf1d940d2f.ctex"
+uid="uid://3d44xi30pj8w"
+path="res://.godot/imported/floor_border_neon.png-ace63a0657550824403413e12ea04d61.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://addons/OpenOrbit.Godot/examples/test_game/tile_midspin.png"
-dest_files=["res://.godot/imported/tile_midspin.png-90d2f15103e0c05ed76214cf1d940d2f.ctex"]
+source_file="res://addons/OpenOrbit.Godot/examples/test_game/floor_border_neon.png"
+dest_files=["res://.godot/imported/floor_border_neon.png-ace63a0657550824403413e12ea04d61.ctex"]
 
 [params]
 

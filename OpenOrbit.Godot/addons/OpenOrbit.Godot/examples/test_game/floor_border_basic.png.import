@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dkrs1naw3exjf"
-path="res://.godot/imported/tile_joint.png-1c9564d4082e3685afa66fcbe3ecadcd.ctex"
+uid="uid://xd82c7433g77"
+path="res://.godot/imported/floor_border_basic.png-d4e9157ccefdc390c8e1a201bde679b7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://addons/OpenOrbit.Godot/examples/test_game/tile_joint.png"
-dest_files=["res://.godot/imported/tile_joint.png-1c9564d4082e3685afa66fcbe3ecadcd.ctex"]
+source_file="res://addons/OpenOrbit.Godot/examples/test_game/floor_border_basic.png"
+dest_files=["res://.godot/imported/floor_border_basic.png-d4e9157ccefdc390c8e1a201bde679b7.ctex"]
 
 [params]
 

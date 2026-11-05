@@ -71,6 +71,8 @@ public static class LevelParser
             CameraRotation = GetDouble(s, "rotation", defaults.CameraRotation),
             CameraZoom = GetDouble(s, "zoom", defaults.CameraZoom * 100) / 100,
             LegacyCameraRelativeTo = GetBool(s, "legacyCamRelativeTo", defaults.LegacyCameraRelativeTo),
+            TileShape = GetEnum(s, "tileShape", defaults.TileShape),
+            TrackShadowColor = GetString(s, "trackShadowColor") is { } shadow ? Rgba.Parse(shadow, Rgba.White) : null,
         };
     }
 
@@ -160,6 +162,10 @@ public static class LevelParser
                     GetNullableDouble(e, "opacity") / 100,
                     GetBool(e, "justThisTile", false),
                     GetBool(e, "editorOnly", false)),
+                "TileDimensions" => new TileDimensionsEvent(
+                    floor,
+                    GetDouble(e, "length", 100) / 100,
+                    GetDouble(e, "width", 100) / 100),
                 _ => new UnknownEvent(floor, type, e),
             });
         }

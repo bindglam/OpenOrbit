@@ -49,4 +49,17 @@ public sealed record LevelSettings
 
     /// <summary>옛 레벨 호환: MoveCamera 에 relativeTo 가 없으면 위치를 지금 카메라 위치에 더한다.</summary>
     public bool LegacyCameraRelativeTo { get; init; }
+
+    /// <summary>타일 크기 (settings.tileShape). 타일 간격이 얼불춤 유닛으로 얼마인지 정한다.</summary>
+    public TileShape TileShape { get; init; } = TileShape.Long;
+
+    /// <summary>모든 트랙 스타일의 그림자 색을 덮어쓴다 (settings.trackShadowColor). null 이면 스타일 기본값.</summary>
+    public Rgba? TrackShadowColor { get; init; }
+}
+
+/// <summary>타일 크기 (얼불춤 TileShape). 타일 한 칸이 Long 은 1.5, Short 는 1.0 유닛이다.</summary>
+public enum TileShape
+{
+    Short,
+    Long,
 }

@@ -36,9 +36,6 @@ public readonly record struct TileVisual(
 /// </summary>
 public sealed class TrackTimeline
 {
-    /// <summary>얼불춤 월드 좌표에서 타일 한 칸의 길이 (scrController.tileSize, 기본 긴 타일 0.75 × 2).</summary>
-    public const double UnitsPerTile = 1.5;
-
     private enum Property { X, Y, Rotation, ScaleX, ScaleY, Opacity }
     private const int PropertyCount = 6;
 
@@ -251,6 +248,7 @@ public sealed class TrackTimeline
         var pitch = settings.Pitch;
         var lastFloor = tiles.Length - 1;
         var eventsByFloor = level.Events.ToLookup(e => e.Floor);
+        var unitsPerTile = Chart.UnitsPerTileOf(settings.TileShape);
 
         // 곡 시작(카운트다운 시작) 시각. 이보다 이른 등장은 이 시각으로 당겨진다
         var levelStart = tiles[0].TimeMs - (settings.CountdownTicks - 1) * MsPerBeat(settings.Bpm, pitch);
@@ -297,9 +295,9 @@ public sealed class TrackTimeline
             colors[floor] = tileColor;
 
             var beatMs = MsPerBeat(appearChanged ? referenceBpm : previousReferenceBpm, pitch);
-            AddAppear(tiles, floor, appear, beatsAhead * beatMs, levelStart, pitch, initial, tweens, ref order);
+            AddAppear(tiles, floor, appear, beatsAhead * beatMs, levelStart, pitch, unitsPerTile, initial, tweens, ref order);
             if (floor < lastFloor)
-                AddDisappear(tiles, floor, disappear, tiles[floor + 1].TimeMs + beatsBehind * beatMs, pitch, tweens, ref order);
+                AddDisappear(tiles, floor, disappear, tiles[floor + 1].TimeMs + beatsBehind * beatMs, pitch, unitsPerTile, tweens, ref order);
         }
         return colors;
     }
@@ -313,7 +311,7 @@ public sealed class TrackTimeline
     /// </summary>
     private static void AddAppear(
         Tile[] tiles, int floor, TrackAppearAnimation animation, double aheadMs, double levelStart, double pitch,
-        double[] initial, List<Tween> tweens, ref int order)
+        double unitsPerTile, double[] initial, List<Tween> tweens, ref int order)
     {
         if (animation == TrackAppearAnimation.None)
             return;
@@ -342,7 +340,7 @@ public sealed class TrackTimeline
                 break;
             case TrackAppearAnimation.Assemble or TrackAppearAnimation.Assemble_Far:
             {
-                var range = (animation == TrackAppearAnimation.Assemble ? 4 : 8) / UnitsPerTile;
+                var range = (animation == TrackAppearAnimation.Assemble ? 4 : 8) / unitsPerTile;
                 Initial(Property.X, Random(floor, 1) * range);
                 Initial(Property.Y, Random(floor, 2) * range);
                 Initial(Property.Rotation, Random(floor, 3) * 75);
@@ -352,7 +350,7 @@ public sealed class TrackTimeline
                 Initial(Property.Opacity, 0);
                 break;
             case TrackAppearAnimation.Drop or TrackAppearAnimation.Rise:
-                Initial(Property.Y, (animation == TrackAppearAnimation.Drop ? 8 : -8) / UnitsPerTile);
+                Initial(Property.Y, (animation == TrackAppearAnimation.Drop ? 8 : -8) / unitsPerTile);
                 Initial(Property.ScaleX, 0);
                 Initial(Property.ScaleY, 0);
                 break;
@@ -398,7 +396,8 @@ public sealed class TrackTimeline
 
     /// <summary>ffxFloorDisappearPlus. 다음 타일 도착 뒤 behindMs 가 지나 시작한다. 마지막 타일은 사라지지 않는다.</summary>
     private static void AddDisappear(
-        Tile[] tiles, int floor, TrackDisappearAnimation animation, double start, double pitch, List<Tween> tweens, ref int order)
+        Tile[] tiles, int floor, TrackDisappearAnimation animation, double start, double pitch, double unitsPerTile,
+        List<Tween> tweens, ref int order)
     {
         if (animation == TrackDisappearAnimation.None)
             return;
@@ -424,7 +423,7 @@ public sealed class TrackTimeline
             case TrackDisappearAnimation.Scatter or TrackDisappearAnimation.Scatter_Far:
             {
                 // 흩어지기만 하고 사라지지는 않는다 (얼불춤도 크기, 투명도는 그대로)
-                var range = (animation == TrackDisappearAnimation.Scatter ? 4 : 8) / UnitsPerTile;
+                var range = (animation == TrackDisappearAnimation.Scatter ? 4 : 8) / unitsPerTile;
                 Add(Property.X, Random(floor, 4) * range, Ease.OutSine, relative: true);
                 Add(Property.Y, Random(floor, 5) * range, Ease.OutSine, relative: true);
                 Add(Property.Rotation, Random(floor, 6) * 75, Ease.OutSine);

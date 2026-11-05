@@ -7,19 +7,11 @@ OpenOrbit is a rhythm game engine that plays A Dance of Fire and Ice (ADOFAI, ì–
 ## Commands
 
 ```sh
-dotnet build OpenOrbit.slnx          # build everything (Core + Godot example)
-dotnet build OpenOrbit.Core          # core library only
 dotnet publish OpenOrbit.Native -c Release -r osx-arm64 -o OpenOrbit.Native/bin/publish/osx-arm64   # native lib for Java
 ```
 
-- Java: `OpenOrbit.Java` is a multi-project Gradle build (Java 25, wrapper pinned to 9.6 because run-paper 3.0.2 fails on 9.8). `./gradlew :core:publishNative` runs the publish above for the host RID; `./gradlew build` bundles `bin/publish/<rid>/openorbit.*` into the jars.
-- Minecraft test server: `./gradlew :examples:minecraft-plugin:runServer` (Paper 26.1.2, run dir `examples/minecraft-plugin/run/`).
-- Run the example game: open `OpenOrbit.Examples.Godot/project.godot` in Godot 4.7 (.NET build). The binary is at `/Applications/Godot.app/Contents/MacOS/Godot`.
-- Run log: `~/Library/Application Support/Godot/app_userdata/OpenOrbit.Examples.Godot/logs/`. Godot thread-guard errors show up here.
-- Saved settings (offset, last chart): `user://settings.cfg` in that same directory.
-- Default test chart: `OpenOrbit.Examples.Godot/charts/Kplecraft - 16383/16383.adofai`.
 - There is no test project.
-- To verify game behavior headlessly, temporarily add a scene and script under `OpenOrbit.Examples.Godot/_Verify/` that instantiates `res://scenes/game.tscn` and drives it. Run it with `Godot --path OpenOrbit.Examples.Godot --headless [--audio-driver CoreAudio] res://_Verify/<scene>.tscn`, then delete `_Verify/`.
+- Java and Godot commands live in `OpenOrbit.Java/CLAUDE.md` and `OpenOrbit.Godot/CLAUDE.md`.
 
 ## Architecture
 
@@ -27,18 +19,12 @@ The .NET projects (`OpenOrbit.slnx`) are all on .NET 10:
 
 - **`OpenOrbit.Core`**:
   - Engine-agnostic: no dependencies, and `IsAotCompatible` is set, so avoid reflection.
-- **`OpenOrbit.Examples.Godot`**:
-  - A playable Godot 4.7 frontend that references Core.
-  - Namespace `OpenOrbit.Examples.Godot`.
+- **`OpenOrbit.Godot`**: a playable Godot 4.7 frontend that references Core.
 - **`OpenOrbit.Native`**:
   - NativeAOT shared library (`openorbit.dylib/.so/.dll`) exporting a C ABI (`oo_*`) over `GameSession`, not `GameEngine` (no cross-runtime callbacks or threads).
   - Objects are `GCHandle` handles; failures return negative `OoStatus` with a thread-local `oo_last_error`.
   - Struct layouts in `NativeTypes.cs` must match `Native.java` in `OpenOrbit.Java`.
-- **`OpenOrbit.Java`** (Gradle, outside the solution):
-  - `core`: FFM (`java.lang.foreign`) bindings, package `io.github.bindglam.openorbit`. Loads the library from `-Dopenorbit.library.path`, then `natives/<rid>/` in the jar, then the OS search path.
-  - `examples/minecraft-plugin`: Paper plugin (`io.github.bindglam.openorbit.minecraft`). Renders the chart with per-player display entities, mounts the player on a camera entity, takes movement-key edges (`PlayerInputEvent`) and arm swings as hits, and serves each `.ogg` song as a generated resource pack over a built-in HTTP server. The song clock is `System.nanoTime`, not server ticks.
-    - Each `Game` runs judgment (misses, midspins, autoplay) and particle trails on its own thread every 1 ms under `Game.lock`; the main thread only handles input events and moves entities in `render()` (Bukkit entity calls must stay on the main thread). Sounds, titles and particles are sent straight from the game thread.
-    - Twirl/SetSpeed markers are derived from `Tile.clockwise`/`Tile.bpm` changes against the previous tile, not from raw events.
+- **`OpenOrbit.Java`** (Gradle, outside the solution): FFM bindings over `OpenOrbit.Native` plus a Minecraft plugin example.
 
 ### Core pipeline
 
@@ -55,7 +41,7 @@ The .NET projects (`OpenOrbit.slnx`) are all on .NET 10:
 - **Judgment is angle-based** (`JudgmentWindows`):
   - The effective window is `max(degrees, ms / msPerDegree)`, where `Chart.MsPerDegree(bpm)` includes pitch.
   - The ms floor keeps windows hittable at very high BPM.
-  - Game modes: `Lenient`, `Normal` and `Strict` presets. The Godot game uses `Strict`.
+  - Game modes: `Lenient`, `Normal` and `Strict` presets.
 - **`GameSession`:**
   - `Press(time)` judges an input.
   - `Update(time)` auto-passes midspins (`HitMargin.Auto`) and emits `TooLate` (miss) for tiles whose window has passed.
@@ -66,21 +52,6 @@ The .NET projects (`OpenOrbit.slnx`) are all on .NET 10:
   - All session access and state transitions happen under one lock. `Hit`, `Failed` and `Cleared` are raised inside that lock, possibly on the engine thread, so handlers must not block on other threads and must marshal UI work.
   - An engine subscribes to the input bus in its constructor, so a discarded engine **must be `Dispose()`d**. Otherwise it keeps judging input and stops the shared clock.
 - **Host integration:** implement `IGameClock` (song clock, should follow audio position) and `IInputEventBus`.
-
-### Godot example
-
-- **`Game`:**
-  - Orchestrates loading, state transitions, input and the HUD.
-  - Implements `IInputEventBus` itself.
-  - `SongClock` is the `IGameClock`: it runs on a system timer that is nudged toward the audio playback position each frame. `Stop()` may be called from the engine thread, so Godot node calls are deferred to the main thread.
-- **`TrackView`:**
-  - Renders tiles with one `RenderingServer` canvas item per tile.
-  - Draw commands are recorded once and re-recorded only for tiles whose passed/unpassed state changes.
-  - Earlier tiles draw on top (draw index `n - i`).
-  - Tiles are built from `arm.png`/`joint.png` (two passes: outline, then fill); the dead-end tile before a midspin uses `midspin.png`.
-- **`HitsoundMixer`:** synthesizes hitsounds sample-accurately at chart times into an `AudioStreamGenerator`, independent of input, so high-BPM streams don't smear.
-- **`HitErrorMeter`:** ADOFAI-style timing meter. Errors are mapped piecewise so effective (ms-floored) window boundaries line up with fixed color bands.
-- **Coordinates:** `Coords.ToScreen` converts Core units to pixels (`UnitPx = 100`, Y flipped).
 
 ## Conventions
 

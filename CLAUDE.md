@@ -33,8 +33,16 @@ The .NET projects (`OpenOrbit.slnx`) are all on .NET 10:
 
 - **Level parsing:**
   - Handles both `angleData` and legacy `pathData`.
-  - Only events that affect gameplay are typed (`SetSpeed`, `Twirl`, `Pause`, `Hold`). Everything else is kept as `UnknownEvent` with its raw JSON.
+  - Typed events: gameplay (`SetSpeed`, `Twirl`, `Pause`, `Hold`, `MultiPlanet`) and track (`ColorTrack`, `RecolorTrack`, `MoveTrack`, `AnimateTrack`, `PositionTrack`). Everything else is kept as `UnknownEvent` with its raw JSON.
+  - Some real levels still fail to parse (duplicate keys, raw control characters inside strings); `System.Text.Json` rejects both.
 - **Chart compilation:** precomputes each tile's position (1 unit = one tile, +Y up), arrival `TimeMs`, BPM, rotation direction, entry angle and travel angle.
+  - `PositionTrack` (unless `editorOnly`) moves tile positions here, so the planet path follows it; angles and timing are unchanged.
+  - Events with `"active": false` are dropped by the parser.
+- **Track timeline** (`Chart.Track`, `TrackTimeline.Evaluate(floor, songTimeMs)` → `TileVisual`): offset, rotation, scale, opacity and color of a tile at a time, for renderers.
+  - `ColorTrack`/`AnimateTrack` are per-floor settings (apply from their floor onward; `ColorTrack.justThisTile` only that floor). `RecolorTrack`/`MoveTrack` are timed: they fire at their floor's `TimeMs` plus `angleOffset` and target a tile range.
+  - MoveTrack values are absolute targets relative to the original tile; `null` axes are left alone. Overlapping tweens hand off: a new tween starts from whatever the previous one shows at that moment.
+  - Beat counts for appear/disappear are measured in planet rotation (1 beat = 180°), so they survive BPM changes and pauses.
+  - Not verified against ADOFAI: the appear/disappear animation shapes and their 1-beat length, Blink/Rainbow formulas, `gapLength` (treated as tiles skipped between targets), `Volume` color (falls back to the primary color), and Flash eases (linear).
 - **Midspins** (`Angle == 999`):
   - The tile before a midspin is a dead end that the planet only touches.
   - The midspin tile itself is placed one cell *back* (at tile k-1's position), and the incoming direction is reversed.

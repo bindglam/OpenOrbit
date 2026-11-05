@@ -142,6 +142,7 @@ public partial class Game : Node2D, IInputEventBus
             popup.QueueFree();
         
         _track.CurrentFloor = 0;
+        _track.SongTimeMs = _engine.CurrentTimeMs;
         _camera.Position = Coords.ToScreen(_loaded.Chart.Tiles[0].Position);
     }
 
@@ -176,9 +177,15 @@ public partial class Game : Node2D, IInputEventBus
             _clock.Sync();
         }
 
-        _planets.Set(_engine.Session.GetPlanetState(_engine.CurrentTimeMs));
+        var time = _engine.CurrentTimeMs;
+        var floor = _engine.Session.CurrentFloor;
+        _track.SongTimeMs = time;
 
-        var target = Coords.ToScreen(_loaded.Chart.Tiles[_engine.Session.CurrentFloor].Position);
+        // stickToFloors 면 행성과 카메라가 MoveTrack 으로 움직인 타일을 따라간다
+        var shift = _track.StickToFloors ? _track.TileOffset(floor) : Vector2.Zero;
+        _planets.Set(_engine.Session.GetPlanetState(time), shift);
+
+        var target = Coords.ToScreen(_loaded.Chart.Tiles[floor].Position) + shift;
         _camera.Position = _camera.Position.Lerp(target, (float)(1 - Math.Exp(-delta * 5)));
 
         UpdateHud(_engine.CurrentTimeMs);

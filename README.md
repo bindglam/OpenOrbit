@@ -18,7 +18,7 @@ An open-source rhythm game engine compatible with [A Dance of Fire and Ice](http
     - [ ] Planet rotation
   - [ ] `Hold`
   - [x] `Multi Planet`
-  - Track (computed in the core; renderers don't draw them yet)
+  - Track (computed in the core, drawn by the Godot example)
     - [x] `Color Track`, `Recolor Track`
     - [x] `Move Track`
     - [x] `Animate Track` (appear/disappear shapes are approximations)

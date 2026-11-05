@@ -107,6 +107,57 @@ public sealed class TrackTimeline
             style.GlowIntensity);
     }
 
+    /// <summary>
+    /// songTimeMs 부터 이 시각 전까지는 <see cref="Evaluate"/> 결과가 변하지 않는다.
+    /// 지금 애니메이션 중이면 songTimeMs 를, 앞으로 바뀔 일이 없으면 +∞ 를 돌려준다.
+    /// 렌더러가 그동안 계산을 건너뛰는 데 쓴다 (시각이 뒤로 가면 다시 물어봐야 한다).
+    /// </summary>
+    public double StableUntil(int floor, double songTimeMs)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(floor);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(floor, _tileCount);
+        var t = songTimeMs;
+        var until = double.PositiveInfinity;
+
+        // 등장/퇴장
+        var a = _animations[floor];
+        if (a.Appear != TrackAppearAnimation.None)
+        {
+            if (t < a.AppearStart) until = Math.Min(until, a.AppearStart);
+            else if (t < a.AppearEnd) return t;
+        }
+        if (a.Disappear != TrackDisappearAnimation.None)
+        {
+            if (t < a.DisappearStart) until = Math.Min(until, a.DisappearStart);
+            else if (t < a.DisappearEnd) return t;
+        }
+
+        // MoveTrack
+        for (var p = 0; p < PropertyCount; p++)
+        {
+            var slot = floor * PropertyCount + p;
+            int from = _moveStarts[slot], to = _moveStarts[slot + 1];
+            var k = LastStarted(_moves, from, to, t, static s => s.Start);
+            if (k >= from && t < _moves[k].Start + _moves[k].Duration)
+                return t;
+            if (k + 1 < to)
+                until = Math.Min(until, _moves[k + 1].Start);
+        }
+
+        // 색
+        int first = _recolorStarts[floor], last = _recolorStarts[floor + 1];
+        var r = LastStarted(_recolors, first, last, t, static s => s.Start);
+        var active = r < first ? _baseColors[floor] : _recolors[r].Color;
+        if (active.Type is not (TrackColorType.Single or TrackColorType.Stripes or TrackColorType.Volume))
+            return t;
+        if (r >= first && t < _recolors[r].Start + _recolors[r].Duration)
+            return t;
+        if (r + 1 < last)
+            until = Math.Min(until, _recolors[r + 1].Start);
+
+        return until;
+    }
+
     private static double Progress(double t, double start, double end) =>
         end <= start ? (t >= start ? 1 : 0) : Math.Clamp((t - start) / (end - start), 0, 1);
 

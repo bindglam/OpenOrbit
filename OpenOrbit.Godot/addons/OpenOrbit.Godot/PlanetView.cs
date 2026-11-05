@@ -27,8 +27,9 @@ public partial class PlanetView : Node2D
 
     private readonly Sprite2D[] _sprites = new Sprite2D[MaxPlanets];
     private PlanetState _state = new(default, default, 0);
+    private Vector2 _offset;
 
-    public Vector2 Pivot => Coords.ToScreen(_state.PivotPosition);
+    public Vector2 Pivot => Coords.ToScreen(_state.PivotPosition) + _offset;
     public IReadOnlyList<Sprite2D> PlanetSprites => _sprites;
 
     public override void _Ready()
@@ -45,7 +46,12 @@ public partial class PlanetView : Node2D
         }
     }
 
-    public void Set(PlanetState state) => _state = state;
+    /// <param name="offset">행성 전체를 옮길 화면 좌표 오프셋 (stickToFloors 로 움직인 타일을 따라갈 때).</param>
+    public void Set(PlanetState state, Vector2 offset = default)
+    {
+        _state = state;
+        _offset = offset;
+    }
 
     /// <summary>
     /// i 번 행성의 색. <see cref="PlanetColors"/> 에 없으면 얼불춤 PlanetarySystem 처럼
@@ -85,7 +91,7 @@ public partial class PlanetView : Node2D
         for (var k = 0; k < planets; k++)
         {
             var sprite = _sprites[_state.PlanetAt(k)];
-            sprite.GlobalPosition = Coords.ToScreen(_state.PositionAt(k));
+            sprite.GlobalPosition = Coords.ToScreen(_state.PositionAt(k)) + _offset;
             sprite.Modulate = ColorOf(_state.PlanetAt(k), planets);
         }
     }

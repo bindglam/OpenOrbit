@@ -15,7 +15,7 @@ namespace OpenOrbit.Native;
 /// 세션은 스레드 안전하지 않다. 한 세션은 한 스레드에서만(또는 호출자가 동기화해서) 써야 한다.
 /// </para>
 /// </summary>
-public static unsafe class Exports
+public static unsafe partial class Exports
 {
     [ThreadStatic] private static string? _lastError;
 

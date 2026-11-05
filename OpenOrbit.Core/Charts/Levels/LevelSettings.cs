@@ -46,4 +46,7 @@ public sealed record LevelSettings
 
     /// <summary>카메라 초기 줌. 1 = 100%, 클수록 넓게 보인다.</summary>
     public double CameraZoom { get; init; } = 1;
+
+    /// <summary>옛 레벨 호환: MoveCamera 에 relativeTo 가 없으면 위치를 지금 카메라 위치에 더한다.</summary>
+    public bool LegacyCameraRelativeTo { get; init; }
 }

@@ -70,6 +70,7 @@ public static class LevelParser
             CameraPosition = GetPair(s, "position") is var (x, y) ? new Vec2(x ?? 0, y ?? 0) : defaults.CameraPosition,
             CameraRotation = GetDouble(s, "rotation", defaults.CameraRotation),
             CameraZoom = GetDouble(s, "zoom", defaults.CameraZoom * 100) / 100,
+            LegacyCameraRelativeTo = GetBool(s, "legacyCamRelativeTo", defaults.LegacyCameraRelativeTo),
         };
     }
 
@@ -123,13 +124,13 @@ public static class LevelParser
                 "Pause" => new PauseEvent(floor, GetDouble(e, "duration", 1)),
                 "Hold" => new HoldEvent(floor, (int)GetDouble(e, "duration", 0)),
                 "MultiPlanet" => new MultiPlanetEvent(floor, GetPlanets(e)),
-                "ColorTrack" => new ColorTrackEvent(floor, ParseTrackColor(e), GetBool(e, "justThisTile", false)),
+                "ColorTrack" => new ColorTrackEvent(floor, ParseTrackColorPatch(e), GetBool(e, "justThisTile", false)),
                 "RecolorTrack" => new RecolorTrackEvent(
                     floor,
                     GetTileReference(e, "startTile"),
                     GetTileReference(e, "endTile"),
                     (int)GetDouble(e, "gapLength", 0),
-                    ParseTrackColor(e),
+                    ParseTrackColorPatch(e),
                     GetDouble(e, "duration", 0),
                     GetEnum(e, "ease", Ease.Linear),
                     GetDouble(e, "angleOffset", 0)),
@@ -152,11 +153,11 @@ public static class LevelParser
                     GetNullableDouble(e, "beatsBehind")),
                 "PositionTrack" => new PositionTrackEvent(
                     floor,
-                    GetPair(e, "positionOffset") is var (x, y) ? new Vec2(x ?? 0, y ?? 0) : Vec2.Zero,
+                    e.ContainsKey("positionOffset") && GetPair(e, "positionOffset") is var (x, y) ? new Vec2(x ?? 0, y ?? 0) : null,
                     GetTileReference(e, "relativeTo"),
-                    GetDouble(e, "rotation", 0),
-                    GetDouble(e, "scale", 100) / 100,
-                    GetDouble(e, "opacity", 100) / 100,
+                    GetNullableDouble(e, "rotation"),
+                    GetNullableDouble(e, "scale") / 100,
+                    GetNullableDouble(e, "opacity") / 100,
                     GetBool(e, "justThisTile", false),
                     GetBool(e, "editorOnly", false)),
                 _ => new UnknownEvent(floor, type, e),
@@ -192,7 +193,18 @@ public static class LevelParser
             GetDouble(e, "angleOffset", 0));
     }
 
-    /// <summary>settings, ColorTrack, RecolorTrack 이 같은 키로 갖고 있는 트랙 색. 없는 값은 기본값.</summary>
+    /// <summary>ColorTrack, RecolorTrack 의 트랙 색. 없는 값은 null (바꾸지 않음).</summary>
+    private static TrackColorPatch ParseTrackColorPatch(JsonObject o) => new(
+        GetNullableEnum<TrackColorType>(o, "trackColorType"),
+        GetString(o, "trackColor") is { } c1 ? Rgba.Parse(c1, Rgba.White) : null,
+        GetString(o, "secondaryTrackColor") is { } c2 ? Rgba.Parse(c2, Rgba.White) : null,
+        GetNullableDouble(o, "trackColorAnimDuration"),
+        GetNullableEnum<TrackColorPulse>(o, "trackColorPulse"),
+        GetNullableDouble(o, "trackPulseLength") is { } length ? (int)length : null,
+        GetNullableEnum<TrackStyle>(o, "trackStyle"),
+        GetNullableDouble(o, "trackGlowIntensity"));
+
+    /// <summary>settings 의 트랙 색. 없는 값은 기본값.</summary>
     private static TrackColor ParseTrackColor(JsonObject o)
     {
         var d = TrackColor.Default;

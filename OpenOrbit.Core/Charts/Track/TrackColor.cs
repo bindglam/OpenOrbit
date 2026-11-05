@@ -51,28 +51,70 @@ public sealed record TrackColor(
         TrackColorType.Single, Rgba.Parse("debb7b", Rgba.White), Rgba.White, 2, TrackColorPulse.None, 10, TrackStyle.Standard, 100);
 
     /// <summary>
-    /// floor 번 타일의 timeSec(곡 기준 초) 시점 색.
+    /// floor 번 타일의 색. timeSec 는 곡 기준 초(피치 반영 전)라서 피치가 바뀌어도 주기가 박자에 맞는다.
+    /// colorStart 는 Stripes 의 기준 타일(색 종류를 바꾼 ColorTrack/RecolorTrack 의 타일).
     /// <para>
-    /// 얼불춤 소스를 보고 맞춘 것이 아니라 동작을 보고 근사한 공식이다 (특히 Blink, Rainbow 의 채도).
+    /// 얼불춤 scrFloor.Update / ColorFloor 와 같은 공식이다. 얼불춤은 위상 기준으로 앱 실행 시간(Time.time)을 쓰므로
+    /// 절대 위상은 맞출 필요가 없고, 여기서는 곡 시간을 쓴다.
     /// </para>
     /// </summary>
-    public Rgba Evaluate(int floor, double timeSec)
+    public Rgba Evaluate(int floor, int colorStart, double timeSec)
     {
         var period = Math.Max(AnimDurationSec, 1e-3);
-        // Forward 는 앞 타일이 먼저 바뀌고 뒤 타일이 따라오도록 타일마다 위상을 늦춘다
-        var shift = Pulse == TrackColorPulse.None ? 0 : floor * period / Math.Max(PulseLength, 1);
-        var phase = (Pulse == TrackColorPulse.Backward ? timeSec + shift : timeSec - shift) / period;
+        var length = Math.Max(PulseLength, 1);
+        // Forward: (1 - (floor % L) / L) * T 만큼 앞당김, Backward: (floor % L) / L * T 만큼 앞당김
+        var offset = Pulse switch
+        {
+            TrackColorPulse.Forward => (1 - (double)(floor % length) / length) * period,
+            TrackColorPulse.Backward => (double)(floor % length) / length * period,
+            _ => 0,
+        };
+        var phase = (timeSec + offset) / period;
         var frac = phase - Math.Floor(phase);
 
         return Type switch
         {
-            TrackColorType.Stripes => floor % 2 == 0 ? Primary : Secondary,
-            TrackColorType.Glow => Rgba.Lerp(Primary, Secondary, 0.5 - 0.5 * Math.Cos(2 * Math.PI * phase)),
-            // 보조 색으로 번쩍였다가 주 색으로 돌아온다
-            TrackColorType.Blink => Rgba.Lerp(Primary, Secondary, 1 - frac),
-            TrackColorType.Switch => (long)Math.Floor(phase) % 2 == 0 ? Primary : Secondary,
-            TrackColorType.Rainbow => Rgba.FromHsv(frac, 0.7, 1, Primary.A),
+            // C# 의 % 처럼 음수 차이도 홀짝만 본다
+            TrackColorType.Stripes => (floor - colorStart) % 2 == 0 ? Primary : Secondary,
+            TrackColorType.Glow => Rgba.Lerp(Primary, Secondary, (1 - Math.Cos(2 * Math.PI * frac)) / 2),
+            TrackColorType.Blink => Rgba.Lerp(Primary, Secondary, frac),
+            TrackColorType.Switch => frac < 0.5 ? Primary : Secondary,
+            // 색상만 돌리고 채도와 명도는 주 색의 것을 쓴다
+            TrackColorType.Rainbow => Rainbow(frac),
             _ => Primary,
         };
     }
+
+    /// <summary>시간에 따라 저절로 바뀌는 색 (Glow, Blink, Switch, Rainbow, Volume).</summary>
+    public bool IsAnimated => Type is not (TrackColorType.Single or TrackColorType.Stripes);
+
+    private Rgba Rainbow(double hue)
+    {
+        var (_, s, v) = Primary.ToHsv();
+        return Rgba.FromHsv(hue, s, v, Primary.A);
+    }
+}
+
+/// <summary>
+/// ColorTrack/RecolorTrack 이 바꾸는 값. null 은 이벤트에 없던 값으로, 바꾸지 않는다 (얼불춤의 disabled 필드).
+/// </summary>
+public sealed record TrackColorPatch(
+    TrackColorType? Type,
+    Rgba? Primary,
+    Rgba? Secondary,
+    double? AnimDurationSec,
+    TrackColorPulse? Pulse,
+    int? PulseLength,
+    TrackStyle? Style,
+    double? GlowIntensity)
+{
+    public TrackColor ApplyTo(TrackColor c) => new(
+        Type ?? c.Type,
+        Primary ?? c.Primary,
+        Secondary ?? c.Secondary,
+        AnimDurationSec ?? c.AnimDurationSec,
+        Pulse ?? c.Pulse,
+        PulseLength ?? c.PulseLength,
+        Style ?? c.Style,
+        GlowIntensity ?? c.GlowIntensity);
 }

@@ -22,11 +22,11 @@ public partial class Game : Node2D, IInputEventBus
     private const string SettingsPath = "user://settings.cfg";
     /// <summary>
     /// 카메라 줌 100% 일 때 화면 높이에 들어가는 타일 수.
-    /// 얼불춤 실제 값을 확인하지 못해 어림한 값이다 (직교 카메라 높이 10 유닛, 타일 간격 1.5 유닛으로 가정).
+    /// 얼불춤 카메라 높이는 10 유닛(scrCamera.camsizenormal 5 × 2), 타일 한 칸은 1.5 유닛이다.
     /// </summary>
-    private const float TilesPerScreenHeight = 6.5f;
-    /// <summary>카메라가 플레이어를 따라가는 빠르기 (1/초).</summary>
-    private const double CameraFollowRate = 5;
+    private const float TilesPerScreenHeight = 10f / (float)OpenOrbit.Core.Charts.Track.TrackTimeline.UnitsPerTile;
+    /// <summary>타일에 내린 뒤 카메라가 행성까지 가는 데 걸리는 박 수 (scrCamera.camspeed).</summary>
+    private const double CameraFollowBeats = 2;
 
     private LoadedChart _loaded = null!;
     private bool _hasChart;
@@ -43,7 +43,10 @@ public partial class Game : Node2D, IInputEventBus
     private PlanetView _planets = null!;
     private Node2D _popups = null!;
     private Camera2D _camera = null!;
-    private Vec2 _cameraFollow; // 카메라가 따라가는, 플레이어 위치를 부드럽게 만든 값 (Core 좌표)
+    // 카메라가 따라가는 플레이어 위치 (Core 좌표). 얼불춤처럼 타일에 내릴 때마다 그 자리에서 행성까지 직선으로 간다
+    private Vec2 _followFrom, _followTo;
+    private double _followStartMs, _followDurationMs;
+    private int _followFloor;
     private Hud _hud = null!;
     private FileDialog _openDialog = null!;
     
@@ -151,8 +154,10 @@ public partial class Game : Node2D, IInputEventBus
         
         _track.CurrentFloor = 0;
         _track.SongTimeMs = _engine.CurrentTimeMs;
-        _cameraFollow = _loaded.Chart.Tiles[0].Position;
-        UpdateCamera(_engine.CurrentTimeMs);
+        _followFrom = _followTo = _loaded.Chart.Tiles[0].Position;
+        _followFloor = 0;
+        _followDurationMs = 0;
+        UpdateCamera(_engine.CurrentTimeMs, _followTo);
     }
 
     public void StartPlaying()
@@ -196,18 +201,31 @@ public partial class Game : Node2D, IInputEventBus
         _planets.Set(planets, Coords.ToScreen(shift));
 
         // 플레이어를 따라가는 카메라는 플레이어 위치를 부드럽게 만들어서 넘긴다 (고정 카메라는 영향 없음)
-        var player = planets.PivotPosition + shift;
-        var follow = 1 - Math.Exp(-delta * CameraFollowRate);
-        _cameraFollow += (player - _cameraFollow) * follow;
-        UpdateCamera(time);
+        if (floor != _followFloor)
+        {
+            _followFrom = FollowPosition(time);
+            _followTo = planets.PivotPosition + shift;
+            _followStartMs = time;
+            var pitch = _loaded.Chart.Level.Settings.Pitch / 100;
+            _followDurationMs = CameraFollowBeats * 60000 / (_loaded.Chart.Tiles[floor].Bpm * pitch);
+            _followFloor = floor;
+        }
+        UpdateCamera(time, FollowPosition(time));
 
         UpdateHud(_engine.CurrentTimeMs);
     }
 
-    /// <summary>settings 와 MoveCamera 로 정해진 카메라를 적용한다.</summary>
-    private void UpdateCamera(double time)
+    /// <summary>얼불춤 scrCamera: 마지막으로 내린 타일의 행성 위치까지 2박 동안 선형으로 간다.</summary>
+    private Vec2 FollowPosition(double time)
     {
-        var camera = _loaded.Chart.Camera.Evaluate(time, _cameraFollow);
+        var p = _followDurationMs <= 0 ? 1 : Math.Clamp((time - _followStartMs) / _followDurationMs, 0, 1);
+        return _followFrom + (_followTo - _followFrom) * p;
+    }
+
+    /// <summary>settings 와 MoveCamera 로 정해진 카메라를 적용한다.</summary>
+    private void UpdateCamera(double time, Vec2 player)
+    {
+        var camera = _loaded.Chart.Camera.Evaluate(time, player);
         _camera.Position = Coords.ToScreen(camera.Position);
         _camera.Rotation = -Mathf.DegToRad((float)camera.Rotation); // Core 는 반시계, 화면은 Y 가 아래라 반대
         var zoom = GetViewportRect().Size.Y / (TilesPerScreenHeight * Coords.UnitPx * (float)Math.Max(camera.Zoom, 0.01));

@@ -17,7 +17,8 @@ public static class ChartCompiler
         var eventsByFloor = level.Events.ToLookup(e => e.Floor);
         var tiles = new Tile[level.FloorCount];
         var shapes = new (double Rotation, double Scale, double Opacity)[tiles.Length];
-        Array.Fill(shapes, (0, 1, 1));
+        // PositionTrack 의 회전/크기/투명도: JustThisTile 이 아니면 뒤 타일에도 계속 적용된다 (얼불춤 scnGame 과 같음)
+        (double Rotation, double Scale, double Opacity) shape = (0, 1, 1);
 
         var bpm = settings.Bpm;
         var clockwise = true;
@@ -49,6 +50,7 @@ public static class ChartCompiler
 
             var extraAngle = 0.0;
             var tilePosition = position;
+            var tileShape = shape;
             foreach (var e in eventsByFloor[floor])
             {
                 switch (e)
@@ -70,13 +72,18 @@ public static class ChartCompiler
                         break;
                     case PositionTrackEvent p when !p.EditorOnly:
                     {
-                        // 기준 타일 위치 + 오프셋으로 옮긴다. 아직 계산하지 않은 뒤 타일이 기준이면 이 타일 기준으로 본다.
-                        var reference = p.RelativeTo.Resolve(floor, tiles.Length - 1);
-                        var target = (reference >= 0 && reference < floor ? tiles[reference].Position : tilePosition) + p.Offset;
+                        if (p.Offset is { } offset)
+                        {
+                            // 기준 타일 위치 + 오프셋으로 옮긴다. 아직 계산하지 않은 뒤 타일이 기준이면 이 타일 기준으로 본다.
+                            var reference = p.RelativeTo.Resolve(floor, tiles.Length - 1);
+                            var target = (reference >= 0 && reference < floor ? tiles[reference].Position : tilePosition) + offset;
+                            if (!p.JustThisTile)
+                                position += target - tilePosition;
+                            tilePosition = target;
+                        }
+                        tileShape = (p.Rotation ?? tileShape.Rotation, p.Scale ?? tileShape.Scale, p.Opacity ?? tileShape.Opacity);
                         if (!p.JustThisTile)
-                            position += target - tilePosition;
-                        tilePosition = target;
-                        shapes[floor] = (p.Rotation, p.Scale, p.Opacity);
+                            shape = (p.Rotation ?? shape.Rotation, p.Scale ?? shape.Scale, p.Opacity ?? shape.Opacity);
                         break;
                     }
                 }
@@ -98,6 +105,7 @@ public static class ChartCompiler
                 : 0;
             var travelMs = travelAngle * 60000.0 / (bpm * settings.Pitch / 100.0) / 180.0;
 
+            shapes[floor] = tileShape;
             tiles[floor] = new Tile(
                 floor, angle, isMidspin, tilePosition, time,
                 bpm, clockwise, entryAngle, travelAngle, travelMs, planets, pivotPlanet % planets);

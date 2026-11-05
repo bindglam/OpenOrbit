@@ -46,4 +46,18 @@ public readonly record struct Rgba(float R, float G, float B, float A = 1)
         };
         return new Rgba((float)r, (float)g, (float)b, a);
     }
+
+    /// <summary>(h, s, v), 모두 0~1. 알파는 무시한다.</summary>
+    public (double H, double S, double V) ToHsv()
+    {
+        double r = R, g = G, b = B;
+        var max = Math.Max(r, Math.Max(g, b));
+        var min = Math.Min(r, Math.Min(g, b));
+        var d = max - min;
+        var s = max <= 0 ? 0 : d / max;
+        if (d <= 0)
+            return (0, s, max);
+        var h = max == r ? (g - b) / d % 6 : max == g ? (b - r) / d + 2 : (r - g) / d + 4;
+        return ((h / 6 % 1 + 1) % 1, s, max);
+    }
 }

@@ -19,7 +19,7 @@ A playable Godot 4.7 frontend that references Core. The Godot game uses the `Str
   - Implements `IInputEventBus` itself.
   - `SongClock` is the `IGameClock`: it runs on a system timer that is nudged toward the audio playback position each frame. `Stop()` may be called from the engine thread, so Godot node calls are deferred to the main thread.
   - Feeds `TrackView.SongTimeMs` every frame. With `stickToFloors`, planets are shifted by the pivot tile's MoveTrack offset.
-  - The camera comes from `Chart.Camera`: `Game` passes a smoothed player position (exponential follow), and `TilesPerScreenHeight` (a guess) converts ADOFAI zoom into `Camera2D.Zoom`.
+  - The camera comes from `Chart.Camera`. Like ADOFAI's `scrCamera`, the followed player position moves linearly to the landed planet over 2 beats each time a new floor is reached; `TilesPerScreenHeight` (10 / 1.5) converts ADOFAI zoom into `Camera2D.Zoom`.
 - **`TrackView`:**
   - One `RenderingServer` canvas item per drawn tile, with a child item for icons. Geometry is recorded once, in white.
   - Every frame it evaluates `Chart.Track` and pushes only what changed: transform (offset, rotation, scale), `modulate` (opacity, inherited by icons) and `self_modulate` (track color, not inherited). Tiles are skipped until `TrackTimeline.StableUntil`, so static tiles cost nothing.

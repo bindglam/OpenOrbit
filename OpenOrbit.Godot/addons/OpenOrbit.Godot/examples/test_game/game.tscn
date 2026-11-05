@@ -2,9 +2,9 @@
 
 [ext_resource type="Script" uid="uid://det2ruaklhj0g" path="res://addons/OpenOrbit.Godot/examples/test_game/Game.cs" id="1_game"]
 [ext_resource type="AudioStream" uid="uid://wyohnf4tkdn2" path="res://addons/OpenOrbit.Godot/examples/test_game/kick.mp3" id="2_lnu2h"]
-[ext_resource type="Script" uid="uid://bwca8h4k7gaw3" path="res://addons/OpenOrbit.Godot/scripts/PlanetView.cs" id="3_k666e"]
+[ext_resource type="Script" path="res://addons/OpenOrbit.Godot/scripts/PlanetView.cs" id="3_k666e"]
 [ext_resource type="Texture2D" uid="uid://bkv6h5bdvemld" path="res://addons/OpenOrbit.Godot/examples/test_game/white.png" id="4_1v4k2"]
-[ext_resource type="Script" uid="uid://bg63hpn6460rx" path="res://addons/OpenOrbit.Godot/scripts/TrackView.cs" id="4_jt6k6"]
+[ext_resource type="Script" path="res://addons/OpenOrbit.Godot/scripts/TrackView.cs" id="4_jt6k6"]
 [ext_resource type="Texture2D" uid="uid://brq4hu7e831pa" path="res://addons/OpenOrbit.Godot/examples/test_game/tile_arm.png" id="5_nxmm6"]
 [ext_resource type="Texture2D" uid="uid://dkrs1naw3exjf" path="res://addons/OpenOrbit.Godot/examples/test_game/tile_joint.png" id="6_1v4k2"]
 [ext_resource type="Texture2D" uid="uid://jomy2uay3hg" path="res://addons/OpenOrbit.Godot/examples/test_game/tile_midspin.png" id="7_k58cv"]
@@ -23,6 +23,8 @@ volume_db = -5.0
 z_index = 1
 script = ExtResource("3_k666e")
 PlanetTexture = ExtResource("4_1v4k2")
+PlanetScale = null
+PlanetColors = null
 metadata/_custom_type_script = "uid://bwca8h4k7gaw3"
 
 [node name="TrackView" type="Node2D" parent="." unique_id=742346206]

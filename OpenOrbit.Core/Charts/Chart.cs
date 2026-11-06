@@ -16,7 +16,7 @@ public sealed class Chart(Level level, Tile[] tiles, TrackTimeline track, Camera
     /// <summary>카메라 위치, 회전, 줌 (settings 와 MoveCamera). 렌더러용.</summary>
     public CameraTimeline Camera { get; } = camera;
 
-    /// <summary>타일 한 칸이 얼불춤 유닛으로 얼마인지 (scrController.tileSize). 얼불춤 크기 값을 타일 단위로 바꿀 때 쓴다.</summary>
+    /// <summary>타일 한 칸이 얼불춤 유닛으로 얼마인지. 얼불춤 크기 값을 타일 단위로 바꿀 때 쓴다.</summary>
     public double UnitsPerTile => UnitsPerTileOf(Level.Settings.TileShape);
 
     public static double UnitsPerTileOf(TileShape shape) => shape == TileShape.Short ? 1.0 : 1.5;

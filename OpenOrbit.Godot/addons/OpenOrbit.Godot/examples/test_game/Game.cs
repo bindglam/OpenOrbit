@@ -20,7 +20,7 @@ public partial class Game : Node2D, IInputEventBus
     [Export] public bool Autoplay { get; set; }
 
     private const string SettingsPath = "user://settings.cfg";
-    /// <summary>타일에 내린 뒤 카메라가 행성까지 가는 데 걸리는 박 수 (scrCamera.camspeed).</summary>
+    /// <summary>타일에 내린 뒤 카메라가 행성까지 가는 데 걸리는 박 수.</summary>
     private const double CameraFollowBeats = 2;
 
     private LoadedChart _loaded = null!;
@@ -212,7 +212,7 @@ public partial class Game : Node2D, IInputEventBus
         UpdateHud(_engine.CurrentTimeMs);
     }
 
-    /// <summary>얼불춤 scrCamera: 마지막으로 내린 타일의 행성 위치까지 2박 동안 선형으로 간다.</summary>
+    /// <summary>얼불춤처럼 마지막으로 내린 타일의 행성 위치까지 2박 동안 선형으로 간다.</summary>
     private Vec2 FollowPosition(double time)
     {
         var p = _followDurationMs <= 0 ? 1 : Math.Clamp((time - _followStartMs) / _followDurationMs, 0, 1);
@@ -225,7 +225,7 @@ public partial class Game : Node2D, IInputEventBus
         var camera = _loaded.Chart.Camera.Evaluate(time, player);
         _camera.Position = Coords.ToScreen(camera.Position);
         _camera.Rotation = -Mathf.DegToRad((float)camera.Rotation); // Core 는 반시계, 화면은 Y 가 아래라 반대
-        // 얼불춤 줌 100% 는 화면 높이에 10 유닛이 보인다 (scrCamera.camsizenormal 5 × 2; 긴 타일이면 6.67 칸, 짧은 타일이면 10 칸)
+        // 얼불춤 줌 100% 는 화면 높이에 10 유닛이 보인다 (긴 타일이면 6.67 칸, 짧은 타일이면 10 칸)
         var tilesPerScreenHeight = 10f / (float)_loaded.Chart.UnitsPerTile;
         var zoom = GetViewportRect().Size.Y / (tilesPerScreenHeight * Coords.UnitPx * (float)Math.Max(camera.Zoom, 0.01));
         _camera.Zoom = Vector2.One * zoom;

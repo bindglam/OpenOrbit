@@ -11,25 +11,57 @@ namespace OpenOrbit.Core.Charts.Track;
 public readonly record struct CameraState(Vec2 Position, double Rotation, double Zoom);
 
 /// <summary>
-/// settings 의 카메라 초기값과 MoveCamera 이벤트를 정리해 두고 특정 시각의 카메라를 계산한다 (얼불춤 ffxCameraPlus).
+/// settings 의 카메라 초기값과 MoveCamera 이벤트를 정리해 두고 특정 시각의 카메라를 계산한다.
 /// 만든 뒤에는 바뀌지 않으므로 아무 스레드에서나 불러도 된다.
 /// <para>
-/// 얼불춤 카메라는 "카메라 부모" 위치 P 를 트윈한다. 플레이어를 따라가는 동안 P 는 플레이어 기준 오프셋이고,
-/// 고정(Tile, Global)일 때는 월드 좌표다. 플레이어 위치는 호출자가 넘긴다 (얼불춤처럼 부드럽게 따라가게 하려면 미리 부드럽게 만들어서).
+/// 카메라는 "기준점"을 움직인다. 플레이어를 따라가는 동안 기준점은 플레이어로부터의 오프셋이고,
+/// 고정(Tile, Global)일 때는 월드 좌표다. 플레이어 위치는 호출자가 넘긴다 (부드럽게 따라가게 하려면 미리 부드럽게 만들어서).
 /// </para>
 /// <para>
-/// X, Y, 회전, 줌은 각각 트윈 하나씩만 갖는다. 새 트윈이 시작되면 그 속성의 이전 트윈은 끝값으로 바로 완료된다
-/// (DOTween <c>Kill(complete: true)</c>). 바꾸지 않는 속성의 트윈은 계속 진행된다.
+/// X, Y, 회전, 줌은 각각 따로 움직이고 한 번에 움직임 하나만 갖는다. 새 움직임이 시작되면 그 값의 앞 움직임은
+/// 그 자리에서 끝값으로 완료된다. 바꾸지 않는 값의 움직임은 계속 진행된다.
 /// </para>
 /// </summary>
 public sealed class CameraTimeline
 {
-    /// <summary>[Start, Start + Duration) 동안 From → To. Follow 면 값에 플레이어 위치를 더한다.</summary>
-    private readonly record struct Segment(double Start, double Duration, Ease Ease, bool FromFollow, double From, bool ToFollow, double To);
+    /// <summary>값이 플레이어 위치에 붙어 있는지(오프셋) 월드에 고정인지.</summary>
+    private readonly record struct Anchored(double Value, bool OnPlayer)
+    {
+        public double Resolve(double player) => Value + (OnPlayer ? player : 0);
+    }
 
-    private readonly Segment[] _x, _y, _rotation, _zoom;
+    /// <summary>Start 부터 Length 동안 From → To.</summary>
+    private readonly record struct Keyframe(double Start, double Length, Ease Ease, Anchored From, Anchored To);
 
-    private CameraTimeline(Segment[] x, Segment[] y, Segment[] rotation, Segment[] zoom)
+    /// <summary>값 하나의 움직임들 (시작 시각 순). 첫 원소는 settings 값이라 항상 시작된 상태다.</summary>
+    private sealed class Lane(Keyframe[] keys)
+    {
+        public double At(double t, double player)
+        {
+            var lo = 1;
+            var hi = keys.Length;
+            while (lo < hi)
+            {
+                var mid = (lo + hi) >>> 1;
+                if (keys[mid].Start <= t)
+                    lo = mid + 1;
+                else
+                    hi = mid;
+            }
+            var k = keys[lo - 1];
+            var to = k.To.Resolve(player);
+            var progress = k.Length <= 0 ? 1 : Math.Clamp((t - k.Start) / k.Length, 0, 1);
+            if (progress >= 1)
+                return to;
+            // 따라가기 ↔ 고정이 바뀌는 움직임도 양 끝을 지금 플레이어 위치로 풀어서, 그 순간 화면 위치에서 출발하게 한다
+            var from = k.From.Resolve(player);
+            return from + (to - from) * Easing.Evaluate(k.Ease, progress);
+        }
+    }
+
+    private readonly Lane _x, _y, _rotation, _zoom;
+
+    private CameraTimeline(Lane x, Lane y, Lane rotation, Lane zoom)
     {
         _x = x;
         _y = y;
@@ -39,164 +71,159 @@ public sealed class CameraTimeline
 
     /// <summary>songTimeMs 시점의 카메라. player 는 그 시점 플레이어(중심 행성) 위치.</summary>
     public CameraState Evaluate(double songTimeMs, Vec2 player) => new(
-        new Vec2(Sample(_x, songTimeMs, player.X), Sample(_y, songTimeMs, player.Y)),
-        Sample(_rotation, songTimeMs, 0),
-        Sample(_zoom, songTimeMs, 0));
-
-    private static double Sample(Segment[] segments, double t, double player)
-    {
-        // 0 번은 settings 초기값 (항상 시작됨)
-        int lo = 1, hi = segments.Length;
-        while (lo < hi)
-        {
-            var mid = (lo + hi) >>> 1;
-            if (segments[mid].Start <= t)
-                lo = mid + 1;
-            else
-                hi = mid;
-        }
-        var s = segments[lo - 1];
-        var to = s.To + (s.ToFollow ? player : 0);
-        var p = s.Duration <= 0 ? 1 : Math.Clamp((t - s.Start) / s.Duration, 0, 1);
-        if (p >= 1)
-            return to;
-        // 따라가기 ↔ 고정이 바뀌는 트윈은 얼불춤처럼 그 순간 화면 위치에서 출발하도록 양쪽 다 지금 플레이어 위치로 맞춘다
-        var from = s.From + (s.FromFollow ? player : 0);
-        return from + (to - from) * Easing.Evaluate(s.Ease, p);
-    }
+        new Vec2(_x.At(songTimeMs, player.X), _y.At(songTimeMs, player.Y)),
+        _rotation.At(songTimeMs, 0),
+        _zoom.At(songTimeMs, 0));
 
     internal static CameraTimeline Build(Level level, Tile[] tiles)
     {
         var settings = level.Settings;
-        var lastFloor = tiles.Length - 1;
         var pitch = settings.Pitch;
-        var builder = new Builder(settings.LegacyCameraRelativeTo);
+        double BeatMs(Tile tile) => 60000.0 / (tile.Bpm * pitch / 100.0);
 
-        // settings 값은 0 번 타일에 걸린 길이 0 짜리 MoveCamera 와 같다
-        builder.Apply(double.NegativeInfinity, 0, new MoveCameraEvent(
+        var rig = new Rig(settings.LegacyCameraRelativeTo);
+
+        // settings 값은 처음부터 걸려 있는 길이 0 짜리 MoveCamera 로 본다
+        rig.Move(double.NegativeInfinity, 0, new MoveCameraEvent(
             0, 0, settings.CameraRelativeTo, settings.CameraPosition.X, settings.CameraPosition.Y,
             settings.CameraRotation, settings.CameraZoom, Ease.Linear, 0), tiles[0].Position);
+        rig.FillEmptyLanes();
 
-        var timed = new List<(double Start, int Order, MoveCameraEvent Event)>();
-        var order = 0;
-        foreach (var e in level.Events)
-        {
-            if (e is MoveCameraEvent m && m.Floor <= lastFloor)
-                timed.Add((tiles[m.Floor].TimeMs + m.AngleOffset / 180.0 * MsPerBeat(tiles[m.Floor], pitch), order++, m));
-        }
-        timed.Sort((a, b) => a.Start != b.Start ? a.Start.CompareTo(b.Start) : a.Order.CompareTo(b.Order));
-        foreach (var (start, _, m) in timed)
-            builder.Apply(start, m.DurationBeats * MsPerBeat(tiles[m.Floor], pitch), m, tiles[m.Floor].Position);
+        // 이벤트는 실제로 시작하는 시각 순서대로 적용한다 (같은 시각이면 레벨에 적힌 순서)
+        var moves = level.Events
+            .OfType<MoveCameraEvent>()
+            .Where(m => m.Floor < tiles.Length)
+            .Select(m => (Event: m, Start: tiles[m.Floor].TimeMs + m.AngleOffset / 180.0 * BeatMs(tiles[m.Floor])))
+            .OrderBy(x => x.Start);
+        foreach (var (m, start) in moves)
+            rig.Move(start, m.DurationBeats * BeatMs(tiles[m.Floor]), m, tiles[m.Floor].Position);
 
-        return new CameraTimeline(builder.X.ToArray(), builder.Y.ToArray(), builder.Rotation.ToArray(), builder.Zoom.ToArray());
+        return new CameraTimeline(
+            new Lane([.. rig.X]), new Lane([.. rig.Y]), new Lane([.. rig.Rotation]), new Lane([.. rig.Zoom]));
     }
 
-    private static double MsPerBeat(Tile tile, double pitch) => 60000.0 / (tile.Bpm * pitch / 100.0);
-
-    /// <summary>ffxCameraPlus.StartEffect 를 시간순으로 흉내 내며 트윈을 쌓는다.</summary>
-    private sealed class Builder(bool legacyRelativeTo)
+    /// <summary>
+    /// 카메라 상태를 들고 MoveCamera 를 하나씩 적용하며 각 값의 움직임을 쌓는다.
+    /// </summary>
+    private sealed class Rig(bool legacyRelativeTo)
     {
-        public readonly List<Segment> X = [], Y = [], Rotation = [], Zoom = [];
+        public readonly List<Keyframe> X = [], Y = [], Rotation = [], Zoom = [];
 
-        private bool _follow = true;
-        private Vec2 _parent;   // 카메라 부모 위치: 따라가는 중이면 오프셋, 아니면 월드 좌표
-        private double _rotation;
+        private bool _onPlayer = true;
+        private Vec2 _point;       // 기준점: 따라가는 중이면 플레이어로부터의 오프셋, 아니면 월드 좌표
+        private double _angle;
         private double _zoom = 1;
-        private CameraRelativeTo _lastType = CameraRelativeTo.Player;
-        private int _lastTileFloor = -1;
+        private CameraRelativeTo _mode = CameraRelativeTo.Player;
+        private int _anchorFloor = -1;  // 마지막으로 Tile 기준을 정한 타일
 
-        public void Apply(double start, double duration, MoveCameraEvent m, Vec2 tilePosition)
+        public void Move(double start, double length, MoveCameraEvent m, Vec2 tilePosition)
         {
-            var positionUsed = m.PositionX is not null || m.PositionY is not null;
-            var type = m.RelativeTo;
+            var hasPosition = m.PositionX is not null || m.PositionY is not null;
+            var mode = EffectiveRelativeTo(m, hasPosition);
 
-            // 기준이 직전과 같고 위치 한 축만 주면 기준을 바꾸지 않은 것으로 본다 (빈 축을 0 으로 만들지 않는다)
-            if (type is { } same && same == _lastType && positionUsed && (m.PositionX is null || m.PositionY is null)
-                && same is not (CameraRelativeTo.Global or CameraRelativeTo.LastPosition or CameraRelativeTo.LastPositionNoRotation)
-                && (same != CameraRelativeTo.Tile || m.Floor == _lastTileFloor))
-                type = null;
+            // 기준을 정하면 비운 축은 0 이다
+            var offset = (X: m.PositionX, Y: m.PositionY);
+            if (mode is not null)
+                offset = (offset.X ?? 0, offset.Y ?? 0);
 
-            double? x = m.PositionX, y = m.PositionY;
-            if (type is not null)
+            var wasOnPlayer = _onPlayer;
+            var addAngle = false;
+            (double? X, double? Y) target;
+            if (legacyRelativeTo && mode is null)
             {
-                // 기준을 정하면 빈 축은 0
-                x ??= 0;
-                y ??= 0;
-            }
-
-            var wasFollow = _follow;
-            double? targetX, targetY;
-            var rotationBase = 0.0;
-            if (legacyRelativeTo && type is null)
-            {
-                // 옛 레벨: 기준 없이 위치만 주면 지금 위치에서 더한다
-                targetX = positionUsed ? _parent.X + x : _parent.X;
-                targetY = positionUsed ? _parent.Y + y : _parent.Y;
+                // 옛 레벨: 기준 없이 위치만 주면 지금 위치에 더한다
+                target = Shifted(offset, hasPosition);
             }
             else
             {
-                switch (type ?? _lastType)
+                var current = mode ?? _mode;
+                switch (current)
                 {
                     case CameraRelativeTo.Player:
-                        _follow = true;
-                        (targetX, targetY) = (x, y);
+                        _onPlayer = true;
+                        target = offset;
                         break;
                     case CameraRelativeTo.Tile:
-                        _follow = false;
-                        if (type is not null)
-                            _lastTileFloor = m.Floor;
-                        (targetX, targetY) = (tilePosition.X + x, tilePosition.Y + y);
+                        _onPlayer = false;
+                        if (mode is not null)
+                            _anchorFloor = m.Floor;
+                        target = (tilePosition.X + offset.X, tilePosition.Y + offset.Y);
                         break;
                     case CameraRelativeTo.Global:
-                        _follow = false;
-                        (targetX, targetY) = (x, y);
+                        _onPlayer = false;
+                        target = offset;
                         break;
-                    default: // LastPosition, LastPositionNoRotation
-                        if ((type ?? _lastType) == CameraRelativeTo.LastPosition)
-                            rotationBase = _rotation; // 회전도 지금 각도에 더한다
-                        targetX = positionUsed ? _parent.X + x : _parent.X;
-                        targetY = positionUsed ? _parent.Y + y : _parent.Y;
+                    default:
+                        // LastPosition 은 회전도 지금 각도에 더하고, NoRotation 은 회전을 그대로 정한다
+                        addAngle = current == CameraRelativeTo.LastPosition;
+                        target = Shifted(offset, hasPosition);
                         break;
                 }
             }
-            if (type is { } used)
-                _lastType = used;
+            if (mode is { } chosen)
+                _mode = chosen;
 
-            if (positionUsed || type is not null)
+            if (hasPosition || mode is not null)
             {
-                if (targetX is { } tx)
+                if (target.X is { } x)
                 {
-                    X.Add(new Segment(start, duration, m.Ease, wasFollow, _parent.X, _follow, tx));
-                    _parent = _parent with { X = tx };
+                    X.Add(new Keyframe(start, length, m.Ease, new(_point.X, wasOnPlayer), new(x, _onPlayer)));
+                    _point = _point with { X = x };
                 }
-                if (targetY is { } ty)
+                if (target.Y is { } y)
                 {
-                    Y.Add(new Segment(start, duration, m.Ease, wasFollow, _parent.Y, _follow, ty));
-                    _parent = _parent with { Y = ty };
+                    Y.Add(new Keyframe(start, length, m.Ease, new(_point.Y, wasOnPlayer), new(y, _onPlayer)));
+                    _point = _point with { Y = y };
                 }
             }
 
-            // LastPosition 계열은 회전 값이 없어도 회전 트윈을 만든다 (NoRotation 은 0 으로 돌아간다)
-            if (m.Rotation is not null || (type is CameraRelativeTo.LastPosition or CameraRelativeTo.LastPositionNoRotation))
+            // LastPosition 계열은 회전 값을 안 줘도 회전을 정한다 (NoRotation 은 0 으로 돌아간다)
+            if (m.Rotation is not null || mode is CameraRelativeTo.LastPosition or CameraRelativeTo.LastPositionNoRotation)
             {
-                var to = (m.Rotation ?? 0) + rotationBase;
-                Rotation.Add(new Segment(start, duration, m.Ease, false, _rotation, false, to));
-                _rotation = to;
+                var angle = (m.Rotation ?? 0) + (addAngle ? _angle : 0.0);
+                Rotation.Add(new Keyframe(start, length, m.Ease, new(_angle, false), new(angle, false)));
+                _angle = angle;
             }
             if (m.Zoom is { } zoom)
             {
-                Zoom.Add(new Segment(start, duration, m.Ease, false, _zoom, false, zoom));
+                Zoom.Add(new Keyframe(start, length, m.Ease, new(_zoom, false), new(zoom, false)));
                 _zoom = zoom;
             }
-
-            // 0 번(settings)이 항상 있도록 비어 있는 속성은 지금 값으로 채운다
-            if (start == double.NegativeInfinity)
-            {
-                if (X.Count == 0) X.Add(new Segment(start, 0, Ease.Linear, _follow, _parent.X, _follow, _parent.X));
-                if (Y.Count == 0) Y.Add(new Segment(start, 0, Ease.Linear, _follow, _parent.Y, _follow, _parent.Y));
-                if (Rotation.Count == 0) Rotation.Add(new Segment(start, 0, Ease.Linear, false, _rotation, false, _rotation));
-                if (Zoom.Count == 0) Zoom.Add(new Segment(start, 0, Ease.Linear, false, _zoom, false, _zoom));
-            }
         }
+
+        /// <summary>
+        /// 이벤트가 새로 정하는 기준. null 이면 기준을 바꾸지 않는다.
+        /// 지금과 같은 기준을 다시 주면서 위치 한 축만 주면 기준을 바꾸지 않은 것으로 본다 (빈 축을 0 으로 만들지 않는다).
+        /// 단 Global 과 LastPosition 계열, 그리고 다른 타일을 가리키는 Tile 은 새로 정한 것이다.
+        /// </summary>
+        private CameraRelativeTo? EffectiveRelativeTo(MoveCameraEvent m, bool hasPosition)
+        {
+            if (m.RelativeTo is not { } requested || requested != _mode)
+                return m.RelativeTo;
+            var oneAxis = hasPosition && (m.PositionX is null || m.PositionY is null);
+            var repeatable = requested switch
+            {
+                CameraRelativeTo.Player => true,
+                CameraRelativeTo.Tile => m.Floor == _anchorFloor,
+                _ => false,
+            };
+            return oneAxis && repeatable ? null : requested;
+        }
+
+        /// <summary>지금 기준점에 오프셋을 더한 위치. 위치를 안 줬으면 지금 자리, 한 축만 비웠으면 그 축은 그대로.</summary>
+        private (double? X, double? Y) Shifted((double? X, double? Y) offset, bool hasPosition) =>
+            hasPosition ? (_point.X + offset.X, _point.Y + offset.Y) : (_point.X, _point.Y);
+
+        /// <summary>settings 가 정하지 않은 값도 첫 원소가 있도록 지금 값으로 채운다.</summary>
+        public void FillEmptyLanes()
+        {
+            var start = double.NegativeInfinity;
+            if (X.Count == 0) X.Add(Hold(start, new(_point.X, _onPlayer)));
+            if (Y.Count == 0) Y.Add(Hold(start, new(_point.Y, _onPlayer)));
+            if (Rotation.Count == 0) Rotation.Add(Hold(start, new(_angle, false)));
+            if (Zoom.Count == 0) Zoom.Add(Hold(start, new(_zoom, false)));
+        }
+
+        private static Keyframe Hold(double start, Anchored value) => new(start, 0, Ease.Linear, value, value);
     }
 }

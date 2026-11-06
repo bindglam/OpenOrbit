@@ -17,7 +17,7 @@ public static class ChartCompiler
         var eventsByFloor = level.Events.ToLookup(e => e.Floor);
         var tiles = new Tile[level.FloorCount];
         var shapes = new (double Rotation, double Scale, double Opacity)[tiles.Length];
-        // PositionTrack 의 회전/크기/투명도: JustThisTile 이 아니면 뒤 타일에도 계속 적용된다 (얼불춤 scnGame 과 같음)
+        // PositionTrack 의 회전/크기/투명도: JustThisTile 이 아니면 뒤 타일에도 계속 적용된다 (얼불춤과 같음)
         (double Rotation, double Scale, double Opacity) shape = (0, 1, 1);
 
         var bpm = settings.Bpm;
@@ -123,7 +123,6 @@ public static class ChartCompiler
 
     /// <summary>
     /// 행성 n 개가 이루는 정다각형의 내각(도). 2공 0°, 3공 60°, 4공 90°.
-    /// 얼불춤 scrMisc.GetInverseAnglePerBeatMultiplanet 과 같은 값.
     /// </summary>
     public static double InteriorAngle(int planets) => 180.0 * (planets - 2) / planets;
 

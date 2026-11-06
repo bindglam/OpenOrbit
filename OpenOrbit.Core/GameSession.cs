@@ -109,7 +109,7 @@ public readonly record struct PlanetState(
 {
     /// <summary>
     /// 순서 k 번째 행성의 위치. 0 = 중심, 1 = 회전 중, 2.. = 그다음에 회전할 행성.
-    /// 행성들은 한 변이 타일 한 칸인 정다각형을 이룬다 (얼불춤 scrPlanet 과 같은 배치).
+    /// 행성들은 한 변이 타일 한 칸인 정다각형을 이룬다 (얼불춤과 같은 배치).
     /// </summary>
     public Vec2 PositionAt(int k)
     {

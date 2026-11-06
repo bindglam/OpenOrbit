@@ -54,8 +54,7 @@ public sealed record TrackColor(
     /// floor 번 타일의 색. timeSec 는 곡 기준 초(피치 반영 전)라서 피치가 바뀌어도 주기가 박자에 맞는다.
     /// colorStart 는 Stripes 의 기준 타일(색 종류를 바꾼 ColorTrack/RecolorTrack 의 타일).
     /// <para>
-    /// 얼불춤 scrFloor.Update / ColorFloor 와 같은 공식이다. 얼불춤은 위상 기준으로 앱 실행 시간(Time.time)을 쓰므로
-    /// 절대 위상은 맞출 필요가 없고, 여기서는 곡 시간을 쓴다.
+    /// 얼불춤과 같은 색이 나온다. 얼불춤의 색 주기는 곡과 무관하게 흐르므로 절대 위상은 맞출 필요가 없고, 여기서는 곡 시간을 쓴다.
     /// </para>
     /// </summary>
     public Rgba Evaluate(int floor, int colorStart, double timeSec)

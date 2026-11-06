@@ -83,7 +83,7 @@ public sealed record AnimateTrackEvent(
 /// <param name="Scale">1 = 100%.</param>
 /// <param name="Opacity">0~1.</param>
 /// <param name="EditorOnly">에디터에서만 적용되고 플레이 중에는 무시한다.</param>
-/// <summary>이 타일부터 타일 메시의 길이와 폭을 기본의 몇 배로 그린다. 타일 간격은 그대로다 (얼불춤 scrFloor.lengthMult/widthMult).</summary>
+/// <summary>이 타일부터 타일 메시의 길이와 폭을 기본의 몇 배로 그린다. 타일 간격은 그대로다.</summary>
 /// <param name="Length">1 = 100%.</param>
 /// <param name="Width">1 = 100%.</param>
 public sealed record TileDimensionsEvent(int Floor, double Length, double Width) : LevelEvent(Floor);

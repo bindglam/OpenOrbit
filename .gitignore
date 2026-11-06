@@ -13,3 +13,4 @@ build/
 *.uid
 # Paper 테스트 서버 (runServer)
 OpenOrbit.Java/examples/minecraft-plugin/run/
+*.DotSettings.user

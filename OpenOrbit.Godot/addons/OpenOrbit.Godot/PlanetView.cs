@@ -17,7 +17,27 @@ public partial class PlanetView : Node2D
 
     /// <summary>행성 이미지. 비워 두면 기본 흰 공. 색을 곱해서 칠하므로 흰색 이미지여야 한다.</summary>
     [Export] public Texture2D? PlanetTexture { get; set; }
+    /// <summary>긴 타일(Long) 기준 행성 이미지 크기.</summary>
     [Export] public Vector2 PlanetScale { get; set; } = new(0.07f, 0.07f);
+
+    /// <summary>
+    /// <see cref="PlanetScale"/> 에 곱하는 배율. 얼불춤 행성은 유닛 기준 크기라 짧은 타일(Short) 채보에서는 1.5 로 둔다.
+    /// </summary>
+    public float SizeScale
+    {
+        get => _sizeScale;
+        set
+        {
+            _sizeScale = value;
+            foreach (var sprite in _sprites)
+            {
+                if (sprite is not null)
+                    sprite.Scale = PlanetScale * value;
+            }
+        }
+    }
+
+    private float _sizeScale = 1;
 
     /// <summary>
     /// 행성마다의 색. 0 = 불, 1 = 얼음, 2 = 세 번째 행성, 3 = 네 번째 행성 ...
@@ -27,8 +47,9 @@ public partial class PlanetView : Node2D
 
     private readonly Sprite2D[] _sprites = new Sprite2D[MaxPlanets];
     private PlanetState _state = new(default, default, 0);
+    private Vector2 _offset;
 
-    public Vector2 Pivot => Coords.ToScreen(_state.PivotPosition);
+    public Vector2 Pivot => Coords.ToScreen(_state.PivotPosition) + _offset;
     public IReadOnlyList<Sprite2D> PlanetSprites => _sprites;
 
     public override void _Ready()
@@ -39,13 +60,18 @@ public partial class PlanetView : Node2D
             AddChild(_sprites[i] = new Sprite2D
             {
                 Texture = PlanetTexture,
-                Scale = PlanetScale,
+                Scale = PlanetScale * _sizeScale,
                 TopLevel = true, // 위치는 화면 좌표로 직접 정한다
             });
         }
     }
 
-    public void Set(PlanetState state) => _state = state;
+    /// <param name="offset">행성 전체를 옮길 화면 좌표 오프셋 (stickToFloors 로 움직인 타일을 따라갈 때).</param>
+    public void Set(PlanetState state, Vector2 offset = default)
+    {
+        _state = state;
+        _offset = offset;
+    }
 
     /// <summary>
     /// i 번 행성의 색. <see cref="PlanetColors"/> 에 없으면 얼불춤 PlanetarySystem 처럼
@@ -85,7 +111,7 @@ public partial class PlanetView : Node2D
         for (var k = 0; k < planets; k++)
         {
             var sprite = _sprites[_state.PlanetAt(k)];
-            sprite.GlobalPosition = Coords.ToScreen(_state.PositionAt(k));
+            sprite.GlobalPosition = Coords.ToScreen(_state.PositionAt(k)) + _offset;
             sprite.Modulate = ColorOf(_state.PlanetAt(k), planets);
         }
     }

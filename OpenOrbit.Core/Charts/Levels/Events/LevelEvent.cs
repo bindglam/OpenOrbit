@@ -29,6 +29,6 @@ public sealed record HoldEvent(int Floor, int Duration) : LevelEvent(Floor);
 public sealed record MultiPlanetEvent(int Floor, int Planets) : LevelEvent(Floor);
 
 /// <summary>
-/// 아직 해석하지 않는 이벤트 (장식, 카메라, MultiPlanet 등). 원본 JSON 을 그대로 보관한다.
+/// 아직 해석하지 않는 이벤트 (장식, 카메라 등). 원본 JSON 을 그대로 보관한다.
 /// </summary>
 public sealed record UnknownEvent(int Floor, string EventType, JsonObject Raw) : LevelEvent(Floor);

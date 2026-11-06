@@ -5,6 +5,7 @@ using System.Linq;
 using Godot;
 using OpenOrbit.Godot;
 using OpenOrbit.Core;
+using OpenOrbit.Core.Geometry;
 using OpenOrbit.Core.Timing;
 
 namespace OpenOrbit.Godot.Examples.TestGame;
@@ -19,7 +20,8 @@ public partial class Game : Node2D, IInputEventBus
     [Export] public bool Autoplay { get; set; }
 
     private const string SettingsPath = "user://settings.cfg";
-    private const float CameraZoom = 0.75f;
+    /// <summary>타일에 내린 뒤 카메라가 행성까지 가는 데 걸리는 박 수.</summary>
+    private const double CameraFollowBeats = 2;
 
     private LoadedChart _loaded = null!;
     private bool _hasChart;
@@ -36,6 +38,10 @@ public partial class Game : Node2D, IInputEventBus
     private PlanetView _planets = null!;
     private Node2D _popups = null!;
     private Camera2D _camera = null!;
+    // 카메라가 따라가는 플레이어 위치 (Core 좌표). 얼불춤처럼 타일에 내릴 때마다 그 자리에서 행성까지 직선으로 간다
+    private Vec2 _followFrom, _followTo;
+    private double _followStartMs, _followDurationMs;
+    private int _followFloor;
     private Hud _hud = null!;
     private FileDialog _openDialog = null!;
     
@@ -53,7 +59,7 @@ public partial class Game : Node2D, IInputEventBus
         _track = GetNode<TrackView>("TrackView");
         _planets = GetNode<PlanetView>("PlanetView");
         AddChild(_popups = new Node2D());
-        AddChild(_camera = new Camera2D { Zoom = Vector2.One * CameraZoom });
+        AddChild(_camera = new Camera2D { IgnoreRotation = false });
         AddChild(_hud = new Hud());
         AddChild(_openDialog = CreateOpenDialog());
         _clock = new SongClock(_music);
@@ -121,6 +127,8 @@ public partial class Game : Node2D, IInputEventBus
         _music.Stream = loaded.Song;
         _music.PitchScale = (float)(loaded.Chart.Level.Settings.Pitch / 100.0);
         _track.Setup(loaded.Chart);
+        // 행성 크기는 얼불춤 유닛으로 정해져 있어서 짧은 타일이면 타일에 비해 커진다
+        _planets.SizeScale = 1.5f / (float)loaded.Chart.UnitsPerTile;
         Reset();
         return true;
     }
@@ -142,7 +150,11 @@ public partial class Game : Node2D, IInputEventBus
             popup.QueueFree();
         
         _track.CurrentFloor = 0;
-        _camera.Position = Coords.ToScreen(_loaded.Chart.Tiles[0].Position);
+        _track.SongTimeMs = _engine.CurrentTimeMs;
+        _followFrom = _followTo = _loaded.Chart.Tiles[0].Position;
+        _followFloor = 0;
+        _followDurationMs = 0;
+        UpdateCamera(_engine.CurrentTimeMs, _followTo);
     }
 
     public void StartPlaying()
@@ -176,12 +188,47 @@ public partial class Game : Node2D, IInputEventBus
             _clock.Sync();
         }
 
-        _planets.Set(_engine.Session.GetPlanetState(_engine.CurrentTimeMs));
+        var time = _engine.CurrentTimeMs;
+        var floor = _engine.Session.CurrentFloor;
+        _track.SongTimeMs = time;
 
-        var target = Coords.ToScreen(_loaded.Chart.Tiles[_engine.Session.CurrentFloor].Position);
-        _camera.Position = _camera.Position.Lerp(target, (float)(1 - Math.Exp(-delta * 5)));
+        // stickToFloors 면 행성과 카메라가 MoveTrack 으로 움직인 타일을 따라간다
+        var shift = _track.StickToFloors ? _loaded.Chart.Track.Evaluate(floor, time).Offset : Vec2.Zero;
+        var planets = _engine.Session.GetPlanetState(time);
+        _planets.Set(planets, Coords.ToScreen(shift));
+
+        // 플레이어를 따라가는 카메라는 플레이어 위치를 부드럽게 만들어서 넘긴다 (고정 카메라는 영향 없음)
+        if (floor != _followFloor)
+        {
+            _followFrom = FollowPosition(time);
+            _followTo = planets.PivotPosition + shift;
+            _followStartMs = time;
+            var pitch = _loaded.Chart.Level.Settings.Pitch / 100;
+            _followDurationMs = CameraFollowBeats * 60000 / (_loaded.Chart.Tiles[floor].Bpm * pitch);
+            _followFloor = floor;
+        }
+        UpdateCamera(time, FollowPosition(time));
 
         UpdateHud(_engine.CurrentTimeMs);
+    }
+
+    /// <summary>얼불춤처럼 마지막으로 내린 타일의 행성 위치까지 2박 동안 선형으로 간다.</summary>
+    private Vec2 FollowPosition(double time)
+    {
+        var p = _followDurationMs <= 0 ? 1 : Math.Clamp((time - _followStartMs) / _followDurationMs, 0, 1);
+        return _followFrom + (_followTo - _followFrom) * p;
+    }
+
+    /// <summary>settings 와 MoveCamera 로 정해진 카메라를 적용한다.</summary>
+    private void UpdateCamera(double time, Vec2 player)
+    {
+        var camera = _loaded.Chart.Camera.Evaluate(time, player);
+        _camera.Position = Coords.ToScreen(camera.Position);
+        _camera.Rotation = -Mathf.DegToRad((float)camera.Rotation); // Core 는 반시계, 화면은 Y 가 아래라 반대
+        // 얼불춤 줌 100% 는 화면 높이에 10 유닛이 보인다 (긴 타일이면 6.67 칸, 짧은 타일이면 10 칸)
+        var tilesPerScreenHeight = 10f / (float)_loaded.Chart.UnitsPerTile;
+        var zoom = GetViewportRect().Size.Y / (tilesPerScreenHeight * Coords.UnitPx * (float)Math.Max(camera.Zoom, 0.01));
+        _camera.Zoom = Vector2.One * zoom;
     }
 
     private void Hit(HitResult result)

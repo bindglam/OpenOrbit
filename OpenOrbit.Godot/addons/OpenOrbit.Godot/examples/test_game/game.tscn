@@ -2,12 +2,17 @@
 
 [ext_resource type="Script" uid="uid://det2ruaklhj0g" path="res://addons/OpenOrbit.Godot/examples/test_game/Game.cs" id="1_game"]
 [ext_resource type="AudioStream" uid="uid://wyohnf4tkdn2" path="res://addons/OpenOrbit.Godot/examples/test_game/kick.mp3" id="2_lnu2h"]
-[ext_resource type="Script" path="res://addons/OpenOrbit.Godot/scripts/PlanetView.cs" id="3_k666e"]
+[ext_resource type="Script" uid="uid://bwca8h4k7gaw3" path="res://addons/OpenOrbit.Godot/PlanetView.cs" id="3_k666e"]
 [ext_resource type="Texture2D" uid="uid://bkv6h5bdvemld" path="res://addons/OpenOrbit.Godot/examples/test_game/white.png" id="4_1v4k2"]
-[ext_resource type="Script" path="res://addons/OpenOrbit.Godot/scripts/TrackView.cs" id="4_jt6k6"]
-[ext_resource type="Texture2D" uid="uid://brq4hu7e831pa" path="res://addons/OpenOrbit.Godot/examples/test_game/tile_arm.png" id="5_nxmm6"]
-[ext_resource type="Texture2D" uid="uid://dkrs1naw3exjf" path="res://addons/OpenOrbit.Godot/examples/test_game/tile_joint.png" id="6_1v4k2"]
-[ext_resource type="Texture2D" uid="uid://jomy2uay3hg" path="res://addons/OpenOrbit.Godot/examples/test_game/tile_midspin.png" id="7_k58cv"]
+[ext_resource type="Script" uid="uid://bg63hpn6460rx" path="res://addons/OpenOrbit.Godot/TrackView.cs" id="4_jt6k6"]
+[ext_resource type="Texture2D" uid="uid://cg7ngl2kmsetn" path="res://addons/OpenOrbit.Godot/examples/test_game/floor_border.png" id="5_border"]
+[ext_resource type="Texture2D" uid="uid://tx1jvbmo3oun" path="res://addons/OpenOrbit.Godot/examples/test_game/floor_surface.png" id="6_surface"]
+[ext_resource type="Texture2D" uid="uid://cveym3xl2pn8b" path="res://addons/OpenOrbit.Godot/examples/test_game/floor_noise.png" id="7_noise"]
+[ext_resource type="Texture2D" uid="uid://xd82c7433g77" path="res://addons/OpenOrbit.Godot/examples/test_game/floor_border_basic.png" id="8_basic"]
+[ext_resource type="Texture2D" uid="uid://3d44xi30pj8w" path="res://addons/OpenOrbit.Godot/examples/test_game/floor_border_neon.png" id="9_neon"]
+[ext_resource type="Texture2D" uid="uid://dxrucqqj438ai" path="res://addons/OpenOrbit.Godot/examples/test_game/floor_border_neonlight.png" id="10_neonlight"]
+[ext_resource type="Texture2D" uid="uid://4enq6s1m0vqk" path="res://addons/OpenOrbit.Godot/examples/test_game/floor_border_minimal.png" id="11_minimal"]
+[ext_resource type="Texture2D" uid="uid://biqx4gxjf5xlc" path="res://addons/OpenOrbit.Godot/examples/test_game/floor_gem.png" id="12_gem"]
 
 [node name="Game" type="Node2D" unique_id=1928932634]
 script = ExtResource("1_game")
@@ -23,13 +28,16 @@ volume_db = -5.0
 z_index = 1
 script = ExtResource("3_k666e")
 PlanetTexture = ExtResource("4_1v4k2")
-PlanetScale = null
-PlanetColors = null
 metadata/_custom_type_script = "uid://bwca8h4k7gaw3"
 
 [node name="TrackView" type="Node2D" parent="." unique_id=742346206]
 script = ExtResource("4_jt6k6")
-ArmTexture = ExtResource("5_nxmm6")
-JointTexture = ExtResource("6_1v4k2")
-MidspinTexture = ExtResource("7_k58cv")
+BorderTexture = ExtResource("5_border")
+BasicBorderTexture = ExtResource("8_basic")
+NeonBorderTexture = ExtResource("9_neon")
+NeonLightBorderTexture = ExtResource("10_neonlight")
+MinimalBorderTexture = ExtResource("11_minimal")
+SurfaceTexture = ExtResource("6_surface")
+NoiseTexture = ExtResource("7_noise")
+GemTexture = ExtResource("12_gem")
 metadata/_custom_type_script = "uid://bg63hpn6460rx"

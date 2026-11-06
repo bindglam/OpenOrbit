@@ -1,11 +1,13 @@
 using OpenOrbit.Core.Geometry;
 using OpenOrbit.Core.Charts.Levels;
 using OpenOrbit.Core.Charts.Levels.Events;
+using OpenOrbit.Core.Charts.Track;
 
 namespace OpenOrbit.Core.Charts;
 
 /// <summary>
-/// <see cref="Level"/> → <see cref="Chart"/>. 각 타일의 위치, 회전량, 판정 시각을 계산한다.
+/// <see cref="Level"/> → <see cref="Chart"/>. 각 타일의 위치, 회전량, 판정 시각을 계산하고
+/// 트랙 장식 타임라인(<see cref="TrackTimeline"/>)과 카메라 타임라인(<see cref="CameraTimeline"/>)을 만든다.
 /// </summary>
 public static class ChartCompiler
 {
@@ -14,6 +16,9 @@ public static class ChartCompiler
         var settings = level.Settings;
         var eventsByFloor = level.Events.ToLookup(e => e.Floor);
         var tiles = new Tile[level.FloorCount];
+        var shapes = new (double Rotation, double Scale, double Opacity)[tiles.Length];
+        // PositionTrack 의 회전/크기/투명도: JustThisTile 이 아니면 뒤 타일에도 계속 적용된다 (얼불춤과 같음)
+        (double Rotation, double Scale, double Opacity) shape = (0, 1, 1);
 
         var bpm = settings.Bpm;
         var clockwise = true;
@@ -44,6 +49,8 @@ public static class ChartCompiler
             }
 
             var extraAngle = 0.0;
+            var tilePosition = position;
+            var tileShape = shape;
             foreach (var e in eventsByFloor[floor])
             {
                 switch (e)
@@ -63,6 +70,22 @@ public static class ChartCompiler
                     case MultiPlanetEvent m:
                         planets = m.Planets;
                         break;
+                    case PositionTrackEvent p when !p.EditorOnly:
+                    {
+                        if (p.Offset is { } offset)
+                        {
+                            // 기준 타일 위치 + 오프셋으로 옮긴다. 아직 계산하지 않은 뒤 타일이 기준이면 이 타일 기준으로 본다.
+                            var reference = p.RelativeTo.Resolve(floor, tiles.Length - 1);
+                            var target = (reference >= 0 && reference < floor ? tiles[reference].Position : tilePosition) + offset;
+                            if (!p.JustThisTile)
+                                position += target - tilePosition;
+                            tilePosition = target;
+                        }
+                        tileShape = (p.Rotation ?? tileShape.Rotation, p.Scale ?? tileShape.Scale, p.Opacity ?? tileShape.Opacity);
+                        if (!p.JustThisTile)
+                            shape = (p.Rotation ?? shape.Rotation, p.Scale ?? shape.Scale, p.Opacity ?? shape.Opacity);
+                        break;
+                    }
                 }
             }
 
@@ -82,8 +105,9 @@ public static class ChartCompiler
                 : 0;
             var travelMs = travelAngle * 60000.0 / (bpm * settings.Pitch / 100.0) / 180.0;
 
+            shapes[floor] = tileShape;
             tiles[floor] = new Tile(
-                floor, angle, isMidspin, position, time,
+                floor, angle, isMidspin, tilePosition, time,
                 bpm, clockwise, entryAngle, travelAngle, travelMs, planets, pivotPlanet % planets);
 
             time += travelMs;
@@ -94,12 +118,11 @@ public static class ChartCompiler
         for (var floor = 0; floor < tiles.Length; floor++)
             tiles[floor] = tiles[floor] with { TimeMs = tiles[floor].TimeMs + shift };
 
-        return new Chart(level, tiles);
+        return new Chart(level, tiles, TrackTimeline.Build(level, tiles, shapes), CameraTimeline.Build(level, tiles));
     }
 
     /// <summary>
     /// 행성 n 개가 이루는 정다각형의 내각(도). 2공 0°, 3공 60°, 4공 90°.
-    /// 얼불춤 scrMisc.GetInverseAnglePerBeatMultiplanet 과 같은 값.
     /// </summary>
     public static double InteriorAngle(int planets) => 180.0 * (planets - 2) / planets;
 
